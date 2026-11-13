@@ -33,3 +33,5 @@ config/main.yaml
 # Editor/IDE
 # .idea/
 # .vscode/
+
+out/

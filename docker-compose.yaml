@@ -7,8 +7,5 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - ./out/pgdata:/var/lib/postgresql/data
     restart: unless-stopped
-
-volumes:
-  pgdata:

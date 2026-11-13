@@ -12,8 +12,8 @@ postgres:
   timeout: 5s
 
 logger:
-  level: "info"
-  folder: "./logs"
+  level: "DEBUG"
+  folder: "./out/logs"
 
 jwt:
   secret: "change-me"
