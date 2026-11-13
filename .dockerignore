@@ -1,0 +1,6 @@
+.git
+.gitignore
+config/main.yaml
+Dockerfile
+*.md
+logs
