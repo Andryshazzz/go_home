@@ -4,14 +4,21 @@ import (
 	"context"
 	"fmt"
 	"go_home/config"
+	httpmiddleware "go_home/internal/middleware"
 	"go_home/pkg/database"
+	httpserver "go_home/pkg/httpserver/server"
+	"go_home/pkg/jwt"
 	"go_home/pkg/logger"
+
+	"github.com/gin-gonic/gin"
 )
 
 type Container struct {
-	cfg    *config.Config
-	logger *logger.Logger
-	pool   *database.ConnectionPool
+	cfg        *config.Config
+	logger     *logger.Logger
+	pool       *database.ConnectionPool
+	server     *httpserver.HTTPServer
+	jwtService *jwt.JWTService
 }
 
 func New(cfg *config.Config) *Container {
@@ -27,7 +34,11 @@ func (c *Container) Start(ctx context.Context) error {
 		return fmt.Errorf("init database: %w", err)
 	}
 
-	return nil
+	if err := c.initHTTPServer(); err != nil {
+		return fmt.Errorf("init HTTP server: %w", err)
+	}
+
+	return c.server.Run(ctx)
 }
 
 func (c *Container) Stop() {
@@ -69,4 +80,97 @@ func (c *Container) initDatabase(ctx context.Context) error {
 	}
 	c.pool = pool
 	return nil
+}
+
+func (c *Container) initHTTPServer() error {
+	server, err := c.getHTTPServer()
+	if err != nil {
+		return fmt.Errorf("init HTTP server: %w", err)
+	}
+	c.server = server
+
+	return nil
+
+}
+func (c *Container) getJWTService() (*jwt.JWTService, error) {
+	if c.jwtService == nil {
+		service, err := jwt.NewJWTService(jwt.Config{
+			Secret:            c.cfg.JWT.Secret,
+			AccessExpiration:  c.cfg.JWT.AccessExpiration,
+			RefreshExpiration: c.cfg.JWT.RefreshExpiration,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("create JWT service: %w", err)
+		}
+
+		c.jwtService = service
+	}
+
+	return c.jwtService, nil
+}
+
+func (c *Container) getLogger() *logger.Logger {
+	if c.logger == nil {
+		log, err := logger.NewLogger(logger.Config{
+			Level:  c.cfg.Logger.Level,
+			Folder: c.cfg.Logger.Folder,
+		})
+		if err != nil {
+			panic(fmt.Errorf("failed to create logger: %w", err))
+		}
+		c.logger = log
+	}
+	return c.logger
+}
+
+func (c *Container) getPool() *database.ConnectionPool {
+	if c.pool == nil {
+		pool, err := database.NewConnectionPool(context.Background(), database.Config{
+			Host:     c.cfg.Postgres.Host,
+			Port:     c.cfg.Postgres.Port,
+			User:     c.cfg.Postgres.User,
+			Password: c.cfg.Postgres.Password,
+			DB:       c.cfg.Postgres.DB,
+			SSLMode:  c.cfg.Postgres.SSLMode,
+			Timeout:  c.cfg.Postgres.Timeout,
+		})
+		if err != nil {
+			panic(fmt.Errorf("failed to create database pool: %w", err))
+		}
+		c.pool = pool
+	}
+	return c.pool
+}
+
+func (c *Container) getHTTPServer() (*httpserver.HTTPServer, error) {
+	if c.server != nil {
+		return c.server, nil
+	}
+
+	log := c.getLogger()
+
+	jwtService, err := c.getJWTService()
+	if err != nil {
+		return nil, fmt.Errorf("get JWT service: %w", err)
+	}
+
+	server := httpserver.NewHTTPServer(
+		httpserver.Config{
+			Addr:            c.cfg.HTTP.Addr,
+			ShutdownTimeout: c.cfg.HTTP.ShutdownTimeout,
+		},
+		log,
+	)
+
+	router := server.Router()
+
+	router.Use(gin.Logger())
+	router.Use(gin.Recovery())
+
+	apiV1 := router.Group("/api/v1")
+	apiV1.Use(httpmiddleware.NewJWTAuth(jwtService).Handle())
+
+	c.server = server
+
+	return c.server, nil
 }
