@@ -2,7 +2,10 @@ module go_home
 
 go 1.26.5
 
-require github.com/ilyakaznacheev/cleanenv v1.5.0
+require (
+	github.com/ilyakaznacheev/cleanenv v1.5.0
+	golang.org/x/crypto v0.48.0
+)
 
 require (
 	github.com/bytedance/gopkg v0.1.3 // indirect
@@ -33,7 +36,6 @@ require (
 	go.mongodb.org/mongo-driver/v2 v2.5.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/arch v0.22.0 // indirect
-	golang.org/x/crypto v0.48.0 // indirect
 	golang.org/x/net v0.51.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/sys v0.41.0 // indirect
@@ -45,6 +47,7 @@ require (
 	github.com/BurntSushi/toml v1.2.1 // indirect
 	github.com/gin-gonic/gin v1.12.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
+	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.13.0
 	github.com/joho/godotenv v1.5.1 // indirect
 	go.uber.org/zap v1.28.0

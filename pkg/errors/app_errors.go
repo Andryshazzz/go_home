@@ -16,41 +16,45 @@ var (
 		HTTPCode: 404,
 		Code:     "user_not_found",
 		Message:  "user not found",
-		Details:  nil,
 	}
-
 	ErrInvalidArgument = AppError{
 		HTTPCode: 422,
 		Code:     "invalid_argument",
 		Message:  "invalid argument provided",
-		Details:  nil,
 	}
-
 	ErrUserAlreadyExists = AppError{
 		HTTPCode: 409,
 		Code:     "user_already_exists",
-		Message:  "user with this phone number already exists",
-		Details:  nil,
+		Message:  "user already exists",
 	}
-
 	ErrInvalidCredentials = AppError{
 		HTTPCode: 401,
 		Code:     "invalid_credentials",
-		Message:  "invalid phone number or password",
-		Details:  nil,
+		Message:  "invalid login or password",
 	}
-
 	ErrInvalidToken = AppError{
 		HTTPCode: 401,
 		Code:     "invalid_token",
 		Message:  "invalid or expired token",
-		Details:  nil,
 	}
-
 	ErrTokenMismatch = AppError{
 		HTTPCode: 401,
 		Code:     "token_mismatch",
 		Message:  "access and refresh token mismatch",
-		Details:  nil,
+	}
+	ErrHashPassword = AppError{
+		HTTPCode: 500,
+		Code:     "password_hash_error",
+		Message:  "failed to hash password",
+	}
+	ErrCreateUser = AppError{
+		HTTPCode: 500,
+		Code:     "user_creation_error",
+		Message:  "failed to create user",
+	}
+	ErrGenerateTokens = AppError{
+		HTTPCode: 500,
+		Code:     "token_generation_error",
+		Message:  "failed to generate tokens",
 	}
 )

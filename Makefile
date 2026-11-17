@@ -1,10 +1,37 @@
-.PHONY: db-up db-down
+include .env.docker
+export
+
+CONFIG ?= ./config/main.yaml
+
+run:
+	go run ./cmd -config=$(CONFIG)
 
 db-up:
-	docker compose up -d
+	docker compose up -d postgres
 
 db-down:
-	docker compose down
+	docker compose down postgres
 
-db-logs:
-	docker compose logs -f postgres
+migrate-up:
+	@make migrate-action action=up
+
+migrate-down:
+	@make migrate-action action=down
+
+migrate-create:
+	@if [ -z "$(seq)" ]; then \
+		echo "Missing seq parameter. Example: make migrate-create seq=init"; \
+		exit 1; \
+	fi;
+
+	docker compose run --rm postgres-migrate \
+		create \
+		-ext sql \
+		-dir /migrations \
+		-seq "$(seq)"
+
+migrate-action:
+	@docker compose run --rm postgres-migrate \
+		-path /migrations \
+		-database postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable \
+		"$(action)"

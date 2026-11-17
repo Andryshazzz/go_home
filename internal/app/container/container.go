@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"go_home/config"
+	authservice "go_home/internal/domain/services/auth"
+	authhandler "go_home/internal/endpoint/controller/http/auth"
+	authrepository "go_home/internal/infrastructure/repository/auth"
 	httpmiddleware "go_home/internal/middleware"
 	"go_home/pkg/database"
 	httpserver "go_home/pkg/httpserver/server"
@@ -19,6 +22,10 @@ type Container struct {
 	pool       *database.ConnectionPool
 	server     *httpserver.HTTPServer
 	jwtService *jwt.JWTService
+
+	authRepository *authrepository.AuthRepository
+	authService    *authservice.AuthService
+	authHandler    *authhandler.AuthHTTPHandler
 }
 
 func New(cfg *config.Config) *Container {
@@ -168,9 +175,49 @@ func (c *Container) getHTTPServer() (*httpserver.HTTPServer, error) {
 	router.Use(gin.Recovery())
 
 	apiV1 := router.Group("/api/v1")
-	apiV1.Use(httpmiddleware.NewJWTAuth(jwtService).Handle())
+
+	c.getAuthHandler().RegisterRoutes(apiV1)
+
+	protected := apiV1.Group("")
+	protected.Use(httpmiddleware.NewJWTAuth(jwtService).Handle())
 
 	c.server = server
 
 	return c.server, nil
+}
+
+func (c *Container) getAuthRepository() *authrepository.AuthRepository {
+	if c.authRepository == nil {
+		c.authRepository = authrepository.NewAuthRepository(
+			c.getPool(),
+		)
+	}
+
+	return c.authRepository
+}
+
+func (c *Container) getAuthService() *authservice.AuthService {
+	if c.authService == nil {
+		jwtService, err := c.getJWTService()
+		if err != nil {
+			panic(fmt.Errorf("get JWT service: %w", err))
+		}
+
+		c.authService = authservice.NewAuthService(
+			c.getAuthRepository(),
+			jwtService,
+		)
+	}
+
+	return c.authService
+}
+
+func (c *Container) getAuthHandler() *authhandler.AuthHTTPHandler {
+	if c.authHandler == nil {
+		c.authHandler = authhandler.NewAuthHTTPHandler(
+			c.getAuthService(),
+		)
+	}
+
+	return c.authHandler
 }

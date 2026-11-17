@@ -9,3 +9,8 @@ services:
     volumes:
       - ./out/pgdata:/var/lib/postgresql/data
     restart: unless-stopped
+
+  postgres-migrate:
+    image: migrate/migrate:v4.19.1
+    volumes:
+      - ./migrations:/migrations
