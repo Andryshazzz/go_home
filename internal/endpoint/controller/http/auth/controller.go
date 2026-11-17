@@ -32,15 +32,27 @@ func (h *AuthHTTPHandler) RegisterRoutes(router *gin.RouterGroup) {
 	}
 }
 
+// register godoc
+// @Summary      Register a new user
+// @Description  Creates a user and returns an access/refresh token pair.
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        request  body      dto.RegisterRequest   true  "Registration data"
+// @Success      201      {object}  dto.RegisterResponse
+// @Failure      400      {object}  dto.ErrorResponse
+// @Failure      409      {object}  dto.ErrorResponse
+// @Failure      500      {object}  dto.ErrorResponse
+// @Router       /auth/register [post]
 func (h *AuthHTTPHandler) register(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	var request dto.RegisterRequest
 
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   "invalid request",
-			"message": err.Error(),
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "invalid request",
+			Message: err.Error(),
 		})
 		return
 	}
@@ -56,8 +68,9 @@ func (h *AuthHTTPHandler) register(c *gin.Context) {
 		},
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "registration failed",
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
+			Error:   "invalid request",
+			Message: err.Error(),
 		})
 		return
 	}

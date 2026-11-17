@@ -1,9 +1,9 @@
 package dto
 
 type RegisterRequest struct {
-	Login    string `json:"login" binding:"required,min=3,max=32"`
-	Email    string `json:"email" binding:"required,email,max=255"`
-	Password string `json:"password" binding:"required,min=8,max=72"`
-	Age      int    `json:"age" binding:"required,min=18,max=120"`
-	Bio      string `json:"bio" binding:"max=1000"`
+	Login    string `json:"login"    binding:"required,min=3,max=64" example:"ivan"`
+	Email    string `json:"email"    binding:"required,email"        example:"ivan@example.com"`
+	Password string `json:"password" binding:"required,min=8"        example:"Str0ngPass!"`
+	Age      int    `json:"age"      binding:"required,gt=0,lt=150"  example:"25"`
+	Bio      string `json:"bio"      binding:"max=1000"              example:"Hello, I am Ivan"`
 }

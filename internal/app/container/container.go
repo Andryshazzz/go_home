@@ -14,6 +14,9 @@ import (
 	"go_home/pkg/logger"
 
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	"go_home/docs"
 )
 
 type Container struct {
@@ -174,6 +177,8 @@ func (c *Container) getHTTPServer() (*httpserver.HTTPServer, error) {
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
 
+	c.registerSwagger(router)
+
 	apiV1 := router.Group("/api/v1")
 
 	c.getAuthHandler().RegisterRoutes(apiV1)
@@ -220,4 +225,14 @@ func (c *Container) getAuthHandler() *authhandler.AuthHTTPHandler {
 	}
 
 	return c.authHandler
+}
+
+func (c *Container) registerSwagger(router gin.IRoutes) {
+	if docs.SwaggerInfo.ReadDoc() == "" {
+		c.getLogger().Warn("Swagger documentation is empty, skipping registration")
+
+		return
+	}
+
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 }

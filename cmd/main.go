@@ -7,6 +7,11 @@ import (
 	"log"
 )
 
+// @title           go_home API
+// @version         1.0
+// @description     User service API.
+// @host            localhost:8080
+// @BasePath        /api/v1
 func main() {
 	configPath := flag.String("config", "./config/main.yaml", "path to config file")
 	flag.Parse()
