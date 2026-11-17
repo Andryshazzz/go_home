@@ -7,3 +7,8 @@ type RegisterRequest struct {
 	Age      int    `json:"age"      binding:"required,gt=0,lt=150"  example:"25"`
 	Bio      string `json:"bio"      binding:"max=1000"              example:"Hello, I am Ivan"`
 }
+
+type LoginRequest struct {
+	Login    string `json:"login" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}

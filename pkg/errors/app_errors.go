@@ -11,6 +11,11 @@ func (e AppError) Error() string {
 	return e.Message
 }
 
+func (e AppError) Is(target error) bool {
+	t, ok := target.(AppError)
+	return ok && t.Code == e.Code
+}
+
 var (
 	ErrNotFoundUser = AppError{
 		HTTPCode: 404,
@@ -56,5 +61,10 @@ var (
 		HTTPCode: 500,
 		Code:     "token_generation_error",
 		Message:  "failed to generate tokens",
+	}
+	ErrInternal = AppError{
+		HTTPCode: 500,
+		Code:     "internal_error",
+		Message:  "internal server error",
 	}
 )

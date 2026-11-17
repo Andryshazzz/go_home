@@ -2,27 +2,14 @@ package authservice
 
 import (
 	"context"
-	"go_home/internal/domain/entity"
+	entity "go_home/internal/domain/entity"
 	apperrors "go_home/pkg/errors"
 )
 
-type RegisterUserRequest struct {
-	Login    string
-	Email    string
-	Password string
-	Age      int
-	Bio      string
-}
-
-type RegisterUserResponse struct {
-	AccessToken  string
-	RefreshToken string
-}
-
 func (s *AuthService) Register(
 	ctx context.Context,
-	req RegisterUserRequest,
-) (*RegisterUserResponse, error) {
+	req entity.RegisterUserRequest,
+) (*entity.RegisterUserResponse, error) {
 	if req.Login == "" {
 		return nil, apperrors.ErrInvalidArgument
 	}
@@ -64,7 +51,7 @@ func (s *AuthService) Register(
 		return nil, apperrors.ErrGenerateTokens
 	}
 
-	return &RegisterUserResponse{
+	return &entity.RegisterUserResponse{
 		AccessToken:  tokenPair.AccessToken,
 		RefreshToken: tokenPair.RefreshToken,
 	}, nil

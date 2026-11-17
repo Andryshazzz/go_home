@@ -2,9 +2,13 @@ package authrepository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"go_home/internal/domain/entity"
 	"go_home/pkg/database"
+	apperrors "go_home/pkg/errors"
+
+	"github.com/jackc/pgx/v5"
 )
 
 type AuthRepository struct {
@@ -72,4 +76,46 @@ func (r *AuthRepository) CreateUser(
 	}
 
 	return createdUser, nil
+}
+
+func (r *AuthRepository) GetUserByLogin(
+	ctx context.Context,
+	login string,
+) (entity.User, error) {
+	ctx, cancel := context.WithTimeout(
+		ctx,
+		r.pool.OpTimeout(),
+	)
+	defer cancel()
+
+	query := `
+		SELECT
+			id,
+			login,
+			email,
+			age,
+			password_hash,
+			bio
+		FROM users
+		WHERE login = $1;
+	`
+
+	var user entity.User
+	err := r.pool.QueryRow(ctx, query, login).Scan(
+		&user.ID,
+		&user.Login,
+		&user.Email,
+		&user.Age,
+		&user.PasswordHash,
+		&user.Bio,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return entity.User{}, apperrors.ErrNotFoundUser
+		}
+
+		return entity.User{}, fmt.Errorf("get user by login: %w", err)
+	}
+
+	return user, nil
 }

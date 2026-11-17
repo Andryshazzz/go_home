@@ -2,15 +2,18 @@ package authhandler
 
 import (
 	"context"
+	"errors"
 	"go_home/internal/domain/dto"
-	authservice "go_home/internal/domain/services/auth"
+	entity "go_home/internal/domain/entity"
+	apperrors "go_home/pkg/errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
 type AuthService interface {
-	Register(ctx context.Context, req authservice.RegisterUserRequest) (*authservice.RegisterUserResponse, error)
+	Register(ctx context.Context, req entity.RegisterUserRequest) (*entity.RegisterUserResponse, error)
+	Login(ctx context.Context, req entity.LoginUserRequest) (*entity.LoginUserResponse, error)
 }
 
 type AuthHTTPHandler struct {
@@ -29,6 +32,7 @@ func (h *AuthHTTPHandler) RegisterRoutes(router *gin.RouterGroup) {
 	auth := router.Group("/auth")
 	{
 		auth.POST("/register", h.register)
+		auth.POST("/login", h.login)
 	}
 }
 
@@ -59,7 +63,7 @@ func (h *AuthHTTPHandler) register(c *gin.Context) {
 
 	response, err := h.authService.Register(
 		ctx,
-		authservice.RegisterUserRequest{
+		entity.RegisterUserRequest{
 			Login:    request.Login,
 			Email:    request.Email,
 			Password: request.Password,
@@ -76,6 +80,67 @@ func (h *AuthHTTPHandler) register(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, dto.RegisterResponse{
+		AccessToken:  response.AccessToken,
+		RefreshToken: response.RefreshToken,
+	})
+}
+
+// login godoc
+// @Summary      Log in
+// @Description  Authenticates a user by login and password and returns a new access/refresh token pair.
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        request  body      dto.LoginRequest   true  "Credentials"
+// @Success      200      {object}  dto.LoginResponse
+// @Failure      400      {object}  dto.ErrorResponse
+// @Failure      401      {object}  dto.ErrorResponse
+// @Failure      500      {object}  dto.ErrorResponse
+// @Router       /auth/login [post]
+func (h *AuthHTTPHandler) login(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	var request dto.LoginRequest
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "invalid request",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	response, err := h.authService.Login(
+		ctx,
+		entity.LoginUserRequest{
+			Login:    request.Login,
+			Password: request.Password,
+		},
+	)
+	if err != nil {
+		if errors.Is(err, apperrors.ErrInvalidCredentials) {
+			c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
+				Error:   "unauthorized",
+				Message: "invalid login or password",
+			})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
+			Error:   "internal error",
+			Message: "something went wrong",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.LoginResponse{
+		User: dto.UserResponse{
+			ID:    response.User.ID.String(),
+			Login: response.User.Login,
+			Email: response.User.Email,
+			Age:   response.User.Age,
+			Bio:   response.User.Bio,
+		},
 		AccessToken:  response.AccessToken,
 		RefreshToken: response.RefreshToken,
 	})

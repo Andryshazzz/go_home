@@ -10,6 +10,7 @@ import (
 
 type AuthRepository interface {
 	CreateUser(ctx context.Context, user entity.User) (entity.User, error)
+	GetUserByLogin(ctx context.Context, login string) (entity.User, error)
 }
 
 type AuthService struct {

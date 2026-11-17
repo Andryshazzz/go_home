@@ -10,6 +10,25 @@ definitions:
           failed on the ''email'' tag'
         type: string
     type: object
+  go_home_internal_domain_dto.LoginRequest:
+    properties:
+      login:
+        type: string
+      password:
+        type: string
+    required:
+    - login
+    - password
+    type: object
+  go_home_internal_domain_dto.LoginResponse:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+      user:
+        $ref: '#/definitions/go_home_internal_domain_dto.UserResponse'
+    type: object
   go_home_internal_domain_dto.RegisterRequest:
     properties:
       age:
@@ -46,6 +65,19 @@ definitions:
         example: eyJhbGciOiJIUzI1NiIs...
         type: string
     type: object
+  go_home_internal_domain_dto.UserResponse:
+    properties:
+      age:
+        type: integer
+      bio:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      login:
+        type: string
+    type: object
 host: localhost:8080
 info:
   contact: {}
@@ -53,6 +85,41 @@ info:
   title: go_home API
   version: "1.0"
 paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates a user by login and password and returns a new access/refresh
+        token pair.
+      parameters:
+      - description: Credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/go_home_internal_domain_dto.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+      summary: Log in
+      tags:
+      - auth
   /auth/register:
     post:
       consumes:
