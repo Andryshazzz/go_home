@@ -1,0 +1,22 @@
+package profileservice
+
+import (
+	"context"
+	"go_home/internal/domain/entity"
+
+	"github.com/google/uuid"
+)
+
+type ProfileRepository interface {
+	GetUserByID(ctx context.Context, id uuid.UUID) (entity.User, error)
+}
+
+type ProfileService struct {
+	profileRepository ProfileRepository
+}
+
+func NewProfileService(profileRepository ProfileRepository) *ProfileService {
+	return &ProfileService{
+		profileRepository: profileRepository,
+	}
+}

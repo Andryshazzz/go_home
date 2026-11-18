@@ -12,6 +12,9 @@ import (
 // @description     User service API.
 // @host            localhost:8080
 // @BasePath        /api/v1
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 func main() {
 	configPath := flag.String("config", "./config/main.yaml", "path to config file")
 	flag.Parse()

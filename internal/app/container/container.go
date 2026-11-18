@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"go_home/config"
 	authservice "go_home/internal/domain/services/auth"
+	profileservice "go_home/internal/domain/services/profile"
 	authhandler "go_home/internal/endpoint/controller/http/auth"
+	profilehandler "go_home/internal/endpoint/controller/http/profile"
 	authrepository "go_home/internal/infrastructure/repository/auth"
 	httpmiddleware "go_home/internal/middleware"
 	"go_home/pkg/database"
@@ -13,10 +15,11 @@ import (
 	"go_home/pkg/jwt"
 	"go_home/pkg/logger"
 
+	"go_home/docs"
+
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	"go_home/docs"
 )
 
 type Container struct {
@@ -29,6 +32,9 @@ type Container struct {
 	authRepository *authrepository.AuthRepository
 	authService    *authservice.AuthService
 	authHandler    *authhandler.AuthHTTPHandler
+
+	profileService *profileservice.ProfileService
+	profileHandler *profilehandler.ProfileHTTPHandler
 }
 
 func New(cfg *config.Config) *Container {
@@ -186,6 +192,8 @@ func (c *Container) getHTTPServer() (*httpserver.HTTPServer, error) {
 	protected := apiV1.Group("")
 	protected.Use(httpmiddleware.NewJWTAuth(jwtService).Handle())
 
+	c.getProfileHandler().RegisterRoutes(protected)
+
 	c.server = server
 
 	return c.server, nil
@@ -225,6 +233,26 @@ func (c *Container) getAuthHandler() *authhandler.AuthHTTPHandler {
 	}
 
 	return c.authHandler
+}
+
+func (c *Container) getProfileService() *profileservice.ProfileService {
+	if c.profileService == nil {
+		c.profileService = profileservice.NewProfileService(
+			c.getAuthRepository(),
+		)
+	}
+
+	return c.profileService
+}
+
+func (c *Container) getProfileHandler() *profilehandler.ProfileHTTPHandler {
+	if c.profileHandler == nil {
+		c.profileHandler = profilehandler.NewProfileHTTPHandler(
+			c.getProfileService(),
+		)
+	}
+
+	return c.profileHandler
 }
 
 func (c *Container) registerSwagger(router gin.IRoutes) {
