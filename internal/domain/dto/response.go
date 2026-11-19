@@ -19,6 +19,13 @@ type UserResponse struct {
 	Bio   string `json:"bio"`
 }
 
+type ListUsersResponse struct {
+	Items  []UserResponse `json:"items"`
+	Total  int            `json:"total"`
+	Limit  int            `json:"limit"`
+	Offset int            `json:"offset"`
+}
+
 type ErrorResponse struct {
 	Error   string `json:"error" example:"invalid request"`
 	Message string `json:"message,omitempty" example:"Key: 'RegisterRequest.Email' Error:Field validation for 'Email' failed on the 'email' tag"`

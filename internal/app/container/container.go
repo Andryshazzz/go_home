@@ -9,6 +9,7 @@ import (
 	authhandler "go_home/internal/endpoint/controller/http/auth"
 	profilehandler "go_home/internal/endpoint/controller/http/profile"
 	authrepository "go_home/internal/infrastructure/repository/auth"
+	profilerepository "go_home/internal/infrastructure/repository/profile"
 	httpmiddleware "go_home/internal/middleware"
 	"go_home/pkg/database"
 	httpserver "go_home/pkg/httpserver/server"
@@ -33,8 +34,9 @@ type Container struct {
 	authService    *authservice.AuthService
 	authHandler    *authhandler.AuthHTTPHandler
 
-	profileService *profileservice.ProfileService
-	profileHandler *profilehandler.ProfileHTTPHandler
+	profileRepository *profilerepository.ProfileRepository
+	profileService    *profileservice.ProfileService
+	profileHandler    *profilehandler.ProfileHTTPHandler
 }
 
 func New(cfg *config.Config) *Container {
@@ -235,16 +237,6 @@ func (c *Container) getAuthHandler() *authhandler.AuthHTTPHandler {
 	return c.authHandler
 }
 
-func (c *Container) getProfileService() *profileservice.ProfileService {
-	if c.profileService == nil {
-		c.profileService = profileservice.NewProfileService(
-			c.getAuthRepository(),
-		)
-	}
-
-	return c.profileService
-}
-
 func (c *Container) getProfileHandler() *profilehandler.ProfileHTTPHandler {
 	if c.profileHandler == nil {
 		c.profileHandler = profilehandler.NewProfileHTTPHandler(
@@ -253,6 +245,24 @@ func (c *Container) getProfileHandler() *profilehandler.ProfileHTTPHandler {
 	}
 
 	return c.profileHandler
+}
+
+func (c *Container) getProfileService() *profileservice.ProfileService {
+	if c.profileService == nil {
+		c.profileService = profileservice.NewProfileService(
+			c.getProfileRepository(),
+		)
+	}
+
+	return c.profileService
+}
+
+func (c *Container) getProfileRepository() *profilerepository.ProfileRepository {
+	if c.profileRepository == nil {
+		c.profileRepository = profilerepository.NewProfileRepository(c.getPool())
+	}
+
+	return c.profileRepository
 }
 
 func (c *Container) registerSwagger(router gin.IRoutes) {

@@ -16,3 +16,9 @@ type LoginRequest struct {
 type LogoutRequest struct {
 	RefreshToken string `json:"refresh_token" binding:"required"`
 }
+
+type ListUsersRequest struct {
+	Login  string `form:"login"`
+	Limit  int    `form:"limit,default=20" binding:"min=1,max=100"`
+	Offset int    `form:"offset" binding:"min=0"`
+}

@@ -16,3 +16,9 @@ type LoginUserRequest struct {
 type LogoutUserRequest struct {
 	RefreshToken string
 }
+
+type ListUsersRequest struct {
+	Login  string
+	Limit  int
+	Offset int
+}

@@ -10,3 +10,8 @@ type LoginUserResponse struct {
 	AccessToken  string
 	RefreshToken string
 }
+
+type ListUsersResponse struct {
+	Users []User
+	Total int
+}
