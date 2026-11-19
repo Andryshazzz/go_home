@@ -10,6 +10,8 @@ import (
 type ProfileRepository interface {
 	GetUserByID(ctx context.Context, id uuid.UUID) (entity.User, error)
 	ListUsers(ctx context.Context, filter entity.ListUsersRequest) ([]entity.User, int, error)
+	UpdateUser(ctx context.Context, req entity.UpdateProfileRequest) (entity.User, error)
+	DeleteUser(ctx context.Context, id uuid.UUID) error
 }
 
 type ProfileService struct {

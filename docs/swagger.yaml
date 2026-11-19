@@ -85,6 +85,17 @@ definitions:
         example: eyJhbGciOiJIUzI1NiIs...
         type: string
     type: object
+  go_home_internal_domain_dto.UpdateProfileRequest:
+    properties:
+      age:
+        type: integer
+      bio:
+        type: string
+      email:
+        type: string
+      login:
+        type: string
+    type: object
   go_home_internal_domain_dto.UserResponse:
     properties:
       age:
@@ -253,6 +264,29 @@ paths:
       tags:
       - profile
   /profile/my:
+    delete:
+      description: Soft-deletes the current user. The account can no longer log in
+        or be listed.
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete my profile
+      tags:
+      - profile
     get:
       description: Returns the profile of the currently authenticated user.
       produces:
@@ -277,6 +311,54 @@ paths:
       security:
       - BearerAuth: []
       summary: Get my profile
+      tags:
+      - profile
+    patch:
+      consumes:
+      - application/json
+      description: Partially updates the profile of the current user. Only the provided
+        fields are changed.
+      parameters:
+      - description: Fields to update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/go_home_internal_domain_dto.UpdateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update my profile
       tags:
       - profile
 securityDefinitions:

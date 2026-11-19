@@ -4,7 +4,8 @@ CREATE TABLE users (
     email         VARCHAR(255) NOT NULL,
     age           INT          NOT NULL,
     password_hash TEXT         NOT NULL,
-    bio           VARCHAR(1000) NOT NULL DEFAULT ''
+    bio           VARCHAR(1000) NOT NULL DEFAULT '',
+    deleted_at    TIMESTAMPTZ   NULL
 );
 
 CREATE UNIQUE INDEX users_login_key ON users (login);

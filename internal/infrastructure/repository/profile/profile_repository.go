@@ -11,7 +11,10 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
+
+const uniqueViolation = "23505"
 
 type ProfileRepository struct {
 	pool *database.ConnectionPool
@@ -31,7 +34,7 @@ func (r *ProfileRepository) GetUserByID(
 	query := `
 		SELECT id, login, email, age, password_hash, bio
 		FROM users
-		WHERE id = $1;
+		WHERE id = $1 AND deleted_at IS NULL;
 	`
 
 	var user entity.User
@@ -66,7 +69,7 @@ func (r *ProfileRepository) ListUsers(
 	var total int
 	if err := r.pool.QueryRow(
 		ctx,
-		`SELECT count(*) FROM users WHERE login ILIKE $1 ESCAPE '\';`,
+		`SELECT count(*) FROM users WHERE login ILIKE $1 ESCAPE '\' AND deleted_at IS NULL;`,
 		pattern,
 	).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count users: %w", err)
@@ -77,7 +80,7 @@ func (r *ProfileRepository) ListUsers(
 		`
 		SELECT id, login, email, age, password_hash, bio
 		FROM users
-		WHERE login ILIKE $1 ESCAPE '\'
+		WHERE login ILIKE $1 ESCAPE '\' AND deleted_at IS NULL
 		ORDER BY login, id
 		LIMIT $2 OFFSET $3;
 		`,
@@ -112,6 +115,89 @@ func (r *ProfileRepository) ListUsers(
 	}
 
 	return users, total, nil
+}
+
+func (r *ProfileRepository) UpdateUser(
+	ctx context.Context,
+	req entity.UpdateProfileRequest,
+) (entity.User, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.pool.OpTimeout())
+	defer cancel()
+
+	query := `
+		UPDATE users
+		SET login = COALESCE($2, login),
+		    email = COALESCE($3, email),
+		    age   = COALESCE($4, age),
+		    bio   = COALESCE($5, bio)
+		WHERE id = $1 AND deleted_at IS NULL
+		RETURNING id, login, email, age, password_hash, bio;
+	`
+
+	var user entity.User
+	err := r.pool.QueryRow(
+		ctx,
+		query,
+		req.UserID,
+		req.Login,
+		req.Email,
+		req.Age,
+		req.Bio,
+	).Scan(
+		&user.ID,
+		&user.Login,
+		&user.Email,
+		&user.Age,
+		&user.PasswordHash,
+		&user.Bio,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return entity.User{}, apperrors.ErrNotFoundUser
+		}
+
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == uniqueViolation {
+			return entity.User{}, apperrors.ErrUserAlreadyExists
+		}
+
+		return entity.User{}, fmt.Errorf("update user: %w", err)
+	}
+
+	return user, nil
+}
+
+func (r *ProfileRepository) DeleteUser(ctx context.Context, id uuid.UUID) error {
+	ctx, cancel := context.WithTimeout(ctx, r.pool.OpTimeout())
+	defer cancel()
+
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	tag, err := tx.Exec(
+		ctx,
+		`UPDATE users SET deleted_at = now() WHERE id = $1 AND deleted_at IS NULL;`,
+		id,
+	)
+	if err != nil {
+		return fmt.Errorf("soft delete user: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return apperrors.ErrNotFoundUser
+	}
+
+	if _, err := tx.Exec(ctx, `DELETE FROM refresh_tokens WHERE user_id = $1;`, id); err != nil {
+		return fmt.Errorf("delete user sessions: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit tx: %w", err)
+	}
+
+	return nil
 }
 
 func escapeLike(s string) string {

@@ -22,3 +22,10 @@ type ListUsersRequest struct {
 	Limit  int    `form:"limit,default=20" binding:"min=1,max=100"`
 	Offset int    `form:"offset" binding:"min=0"`
 }
+
+type UpdateProfileRequest struct {
+	Login *string `json:"login"`
+	Email *string `json:"email"`
+	Age   *int    `json:"age"`
+	Bio   *string `json:"bio"`
+}

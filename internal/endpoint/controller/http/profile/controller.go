@@ -18,6 +18,8 @@ import (
 type ProfileService interface {
 	GetMyProfile(ctx context.Context, userID uuid.UUID) (entity.User, error)
 	ListUsers(ctx context.Context, req entity.ListUsersRequest) (*entity.ListUsersResponse, error)
+	UpdateMyProfile(ctx context.Context, req entity.UpdateProfileRequest) (entity.User, error)
+	DeleteMyProfile(ctx context.Context, userID uuid.UUID) error
 }
 
 type ProfileHTTPHandler struct {
@@ -33,6 +35,8 @@ func (h *ProfileHTTPHandler) RegisterRoutes(router *gin.RouterGroup) {
 	{
 		profile.GET("", h.list)
 		profile.GET("/my", h.getMy)
+		profile.PATCH("/my", h.updateMy)
+		profile.DELETE("/my", h.deleteMy)
 	}
 }
 
@@ -48,21 +52,9 @@ func (h *ProfileHTTPHandler) RegisterRoutes(router *gin.RouterGroup) {
 // @Failure      500  {object}  dto.ErrorResponse
 // @Router       /profile/my [get]
 func (h *ProfileHTTPHandler) getMy(c *gin.Context) {
-	rawID, ok := httpmiddleware.GetUserID(c)
+	userID, ok := currentUserID(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
-			Error:   "unauthorized",
-			Message: "invalid or expired token",
-		})
-		return
-	}
-
-	userID, err := uuid.Parse(rawID)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
-			Error:   "unauthorized",
-			Message: "invalid or expired token",
-		})
+		respondError(c, apperrors.ErrInvalidToken)
 		return
 	}
 
@@ -157,5 +149,117 @@ func (h *ProfileHTTPHandler) list(c *gin.Context) {
 		Total:  response.Total,
 		Limit:  request.Limit,
 		Offset: request.Offset,
+	})
+}
+
+// updateMy godoc
+// @Summary      Update my profile
+// @Description  Partially updates the profile of the current user. Only the provided fields are changed.
+// @Tags         profile
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        request  body      dto.UpdateProfileRequest  true  "Fields to update"
+// @Success      200      {object}  dto.UserResponse
+// @Failure      400      {object}  dto.ErrorResponse
+// @Failure      401      {object}  dto.ErrorResponse
+// @Failure      404      {object}  dto.ErrorResponse
+// @Failure      409      {object}  dto.ErrorResponse
+// @Failure      422      {object}  dto.ErrorResponse
+// @Failure      500      {object}  dto.ErrorResponse
+// @Router       /profile/my [patch]
+func (h *ProfileHTTPHandler) updateMy(c *gin.Context) {
+	userID, ok := currentUserID(c)
+	if !ok {
+		respondError(c, apperrors.ErrInvalidToken)
+		return
+	}
+
+	var request dto.UpdateProfileRequest
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "invalid request",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	user, err := h.profileService.UpdateMyProfile(
+		c.Request.Context(),
+		entity.UpdateProfileRequest{
+			UserID: userID,
+			Login:  request.Login,
+			Email:  request.Email,
+			Age:    request.Age,
+			Bio:    request.Bio,
+		},
+	)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.UserResponse{
+		ID:    user.ID.String(),
+		Login: user.Login,
+		Email: user.Email,
+		Age:   user.Age,
+		Bio:   user.Bio,
+	})
+}
+
+// deleteMy godoc
+// @Summary      Delete my profile
+// @Description  Soft-deletes the current user. The account can no longer log in or be listed.
+// @Tags         profile
+// @Security     BearerAuth
+// @Success      204
+// @Failure      401  {object}  dto.ErrorResponse
+// @Failure      404  {object}  dto.ErrorResponse
+// @Failure      500  {object}  dto.ErrorResponse
+// @Router       /profile/my [delete]
+func (h *ProfileHTTPHandler) deleteMy(c *gin.Context) {
+	userID, ok := currentUserID(c)
+	if !ok {
+		respondError(c, apperrors.ErrInvalidToken)
+		return
+	}
+
+	if err := h.profileService.DeleteMyProfile(c.Request.Context(), userID); err != nil {
+		respondError(c, err)
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}
+
+func currentUserID(c *gin.Context) (uuid.UUID, bool) {
+	rawID, ok := httpmiddleware.GetUserID(c)
+	if !ok {
+		return uuid.Nil, false
+	}
+
+	userID, err := uuid.Parse(rawID)
+	if err != nil {
+		return uuid.Nil, false
+	}
+
+	return userID, true
+}
+
+func respondError(c *gin.Context, err error) {
+	appErr, ok := errors.AsType[apperrors.AppError](err)
+	if !ok {
+		appErr = apperrors.ErrInternal
+	}
+
+	if appErr.HTTPCode >= http.StatusInternalServerError {
+		c.Error(err)
+	}
+
+	c.JSON(appErr.HTTPCode, dto.ErrorResponse{
+		Error:   appErr.Code,
+		Message: appErr.Message,
 	})
 }

@@ -106,7 +106,7 @@ func (r *AuthRepository) GetUserByLogin(
 			password_hash,
 			bio
 		FROM users
-		WHERE login = $1;
+		WHERE login = $1 AND deleted_at IS NULL;
 	`
 
 	var user entity.User
