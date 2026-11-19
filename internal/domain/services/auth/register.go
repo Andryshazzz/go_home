@@ -2,6 +2,8 @@ package authservice
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	entity "go_home/internal/domain/entity"
 	apperrors "go_home/pkg/errors"
 )
@@ -41,14 +43,16 @@ func (s *AuthService) Register(
 
 	createdUser, err := s.authRepository.CreateUser(ctx, user)
 	if err != nil {
-		return nil, apperrors.ErrCreateUser
+		if errors.Is(err, apperrors.ErrUserAlreadyExists) {
+			return nil, err
+		}
+
+		return nil, fmt.Errorf("%w: %w", apperrors.ErrCreateUser, err)
 	}
 
-	tokenPair, err := s.jwtService.GenerateTokenPair(
-		createdUser.ID.String(),
-	)
+	tokenPair, err := s.issueTokens(ctx, createdUser.ID)
 	if err != nil {
-		return nil, apperrors.ErrGenerateTokens
+		return nil, err
 	}
 
 	return &entity.RegisterUserResponse{

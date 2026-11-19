@@ -12,3 +12,7 @@ type LoginUserRequest struct {
 	Login    string
 	Password string
 }
+
+type LogoutUserRequest struct {
+	RefreshToken string
+}

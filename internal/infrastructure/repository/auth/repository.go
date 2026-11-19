@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"go_home/internal/domain/entity"
 	"go_home/pkg/database"
 	apperrors "go_home/pkg/errors"
-	"github.com/google/uuid"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -161,4 +161,87 @@ func (r *AuthRepository) GetUserByID(
 	}
 
 	return user, nil
+}
+
+func (r *AuthRepository) CreateSession(
+	ctx context.Context,
+	session entity.Session,
+) error {
+	ctx, cancel := context.WithTimeout(ctx, r.pool.OpTimeout())
+	defer cancel()
+
+	query := `
+		INSERT INTO refresh_tokens (
+			session_id,
+			user_id,
+			token_hash,
+			expires_at
+		)
+		VALUES ($1, $2, $3, $4);
+	`
+
+	if _, err := r.pool.Exec(
+		ctx,
+		query,
+		session.ID,
+		session.UserID,
+		session.TokenHash,
+		session.ExpiresAt,
+	); err != nil {
+		return fmt.Errorf("create session: %w", err)
+	}
+
+	return nil
+}
+
+func (r *AuthRepository) GetSession(
+	ctx context.Context,
+	id uuid.UUID,
+) (entity.Session, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.pool.OpTimeout())
+	defer cancel()
+
+	query := `
+		SELECT
+			session_id,
+			user_id,
+			token_hash,
+			expires_at
+		FROM refresh_tokens
+		WHERE session_id = $1
+		  AND expires_at > now();
+	`
+
+	var session entity.Session
+	err := r.pool.QueryRow(ctx, query, id).Scan(
+		&session.ID,
+		&session.UserID,
+		&session.TokenHash,
+		&session.ExpiresAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return entity.Session{}, apperrors.ErrInvalidToken
+		}
+
+		return entity.Session{}, fmt.Errorf("get session: %w", err)
+	}
+
+	return session, nil
+}
+
+func (r *AuthRepository) DeleteSession(
+	ctx context.Context,
+	id uuid.UUID,
+) error {
+	ctx, cancel := context.WithTimeout(ctx, r.pool.OpTimeout())
+	defer cancel()
+
+	query := `DELETE FROM refresh_tokens WHERE session_id = $1;`
+
+	if _, err := r.pool.Exec(ctx, query, id); err != nil {
+		return fmt.Errorf("delete session: %w", err)
+	}
+
+	return nil
 }

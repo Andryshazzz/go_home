@@ -14,6 +14,7 @@ import (
 type AuthService interface {
 	Register(ctx context.Context, req entity.RegisterUserRequest) (*entity.RegisterUserResponse, error)
 	Login(ctx context.Context, req entity.LoginUserRequest) (*entity.LoginUserResponse, error)
+	Logout(ctx context.Context, req entity.LogoutUserRequest) error
 }
 
 type AuthHTTPHandler struct {
@@ -33,6 +34,7 @@ func (h *AuthHTTPHandler) RegisterRoutes(router *gin.RouterGroup) {
 	{
 		auth.POST("/register", h.register)
 		auth.POST("/login", h.login)
+		auth.POST("/logout", h.logout)
 	}
 }
 
@@ -144,4 +146,54 @@ func (h *AuthHTTPHandler) login(c *gin.Context) {
 		AccessToken:  response.AccessToken,
 		RefreshToken: response.RefreshToken,
 	})
+}
+
+// logout godoc
+// @Summary      Log out
+// @Description  Invalidates the given refresh token.
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        request  body      dto.LogoutRequest   true  "Refresh token"
+// @Success      204
+// @Failure      400      {object}  dto.ErrorResponse
+// @Failure      401      {object}  dto.ErrorResponse
+// @Failure      500      {object}  dto.ErrorResponse
+// @Router       /auth/logout [post]
+func (h *AuthHTTPHandler) logout(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	var request dto.LogoutRequest
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "invalid request",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	err := h.authService.Logout(
+		ctx,
+		entity.LogoutUserRequest{
+			RefreshToken: request.RefreshToken,
+		},
+	)
+	if err != nil {
+		if errors.Is(err, apperrors.ErrInvalidToken) {
+			c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
+				Error:   "unauthorized",
+				Message: "invalid or expired token",
+			})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
+			Error:   "internal error",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }

@@ -31,9 +31,9 @@ func (s *AuthService) Login(ctx context.Context, req entity.LoginUserRequest) (*
 		return nil, fmt.Errorf("%w: compare password: %w", apperrors.ErrInternal, err)
 	}
 
-	tokenPair, err := s.jwtService.GenerateTokenPair(user.ID.String())
+	tokenPair, err := s.issueTokens(ctx, user.ID)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %w", apperrors.ErrGenerateTokens, err)
+		return nil, err
 	}
 
 	return &entity.LoginUserResponse{
