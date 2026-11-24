@@ -47,5 +47,9 @@ func NewConfig(configPath string) (*Config, error) {
 		return nil, fmt.Errorf("load config: %w", err)
 	}
 
+	if err := cfg.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid config %q:\n%w", configPath, err)
+	}
+
 	return cfg, nil
 }
