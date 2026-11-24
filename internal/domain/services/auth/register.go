@@ -31,7 +31,7 @@ func (s *AuthService) Register(
 
 	passwordHash, err := password.Hash(req.Password)
 	if err != nil {
-		return nil, apperrors.ErrHashPassword
+		return nil, fmt.Errorf("%w: %w", apperrors.ErrHashPassword, err)
 	}
 
 	user := entity.NewUser(
