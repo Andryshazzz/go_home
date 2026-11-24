@@ -1,5 +1,7 @@
 package dto
 
+import apperrors "go_home/pkg/errors"
+
 type TokenPairResponse struct {
 	AccessToken  string `json:"access_token"  example:"eyJhbGciOiJIUzI1NiIs..."`
 	RefreshToken string `json:"refresh_token" example:"eyJhbGciOiJIUzI1NiIs..."`
@@ -26,6 +28,7 @@ type ListUsersResponse struct {
 	Offset int            `json:"offset"`
 }
 type ErrorResponse struct {
-	Error   string `json:"error" example:"invalid request"`
-	Message string `json:"message,omitempty" example:"Key: 'RegisterRequest.Email' Error:Field validation for 'Email' failed on the 'email' tag"`
+	Error   string                 `json:"error"`
+	Message string                 `json:"message"`
+	Details []apperrors.FieldError `json:"details,omitempty"`
 }

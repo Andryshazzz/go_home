@@ -144,7 +144,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/go_home_internal_domain_dto.RefreshResponse"
+                            "$ref": "#/definitions/go_home_internal_domain_dto.TokenPairResponse"
                         }
                     },
                     "400": {
@@ -196,7 +196,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/go_home_internal_domain_dto.RegisterResponse"
+                            "$ref": "#/definitions/go_home_internal_domain_dto.TokenPairResponse"
                         }
                     },
                     "400": {
@@ -424,12 +424,6 @@ const docTemplate = `{
                             "$ref": "#/definitions/go_home_internal_domain_dto.ErrorResponse"
                         }
                     },
-                    "422": {
-                        "description": "Unprocessable Entity",
-                        "schema": {
-                            "$ref": "#/definitions/go_home_internal_domain_dto.ErrorResponse"
-                        }
-                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -444,13 +438,17 @@ const docTemplate = `{
         "go_home_internal_domain_dto.ErrorResponse": {
             "type": "object",
             "properties": {
+                "details": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/go_home_pkg_errors.FieldError"
+                    }
+                },
                 "error": {
-                    "type": "string",
-                    "example": "invalid request"
+                    "type": "string"
                 },
                 "message": {
-                    "type": "string",
-                    "example": "Key: 'RegisterRequest.Email' Error:Field validation for 'Email' failed on the 'email' tag"
+                    "type": "string"
                 }
             }
         },
@@ -525,17 +523,6 @@ const docTemplate = `{
                 }
             }
         },
-        "go_home_internal_domain_dto.RefreshResponse": {
-            "type": "object",
-            "properties": {
-                "access_token": {
-                    "type": "string"
-                },
-                "refresh_token": {
-                    "type": "string"
-                }
-            }
-        },
         "go_home_internal_domain_dto.RegisterRequest": {
             "type": "object",
             "required": [
@@ -571,7 +558,7 @@ const docTemplate = `{
                 }
             }
         },
-        "go_home_internal_domain_dto.RegisterResponse": {
+        "go_home_internal_domain_dto.TokenPairResponse": {
             "type": "object",
             "properties": {
                 "access_token": {
@@ -588,16 +575,22 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "age": {
-                    "type": "integer"
+                    "type": "integer",
+                    "maximum": 120,
+                    "minimum": 1
                 },
                 "bio": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 1000
                 },
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 255
                 },
                 "login": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 64,
+                    "minLength": 3
                 }
             }
         },
@@ -617,6 +610,17 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "login": {
+                    "type": "string"
+                }
+            }
+        },
+        "go_home_pkg_errors.FieldError": {
+            "type": "object",
+            "properties": {
+                "field": {
+                    "type": "string"
+                },
+                "reason": {
                     "type": "string"
                 }
             }

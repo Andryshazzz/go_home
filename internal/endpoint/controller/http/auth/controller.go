@@ -2,10 +2,9 @@ package authhandler
 
 import (
 	"context"
-	"errors"
 	"go_home/internal/domain/dto"
 	entity "go_home/internal/domain/entity"
-	apperrors "go_home/pkg/errors"
+	"go_home/internal/endpoint/controller/http/httpresponse"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -47,7 +46,7 @@ func (h *AuthHTTPHandler) RegisterRoutes(router *gin.RouterGroup) {
 // @Accept       json
 // @Produce      json
 // @Param        request  body      dto.RegisterRequest   true  "Registration data"
-// @Success      201      {object}  dto.RegisterResponse
+// @Success      201      {object}  dto.TokenPairResponse
 // @Failure      400      {object}  dto.ErrorResponse
 // @Failure      409      {object}  dto.ErrorResponse
 // @Failure      500      {object}  dto.ErrorResponse
@@ -58,10 +57,7 @@ func (h *AuthHTTPHandler) register(c *gin.Context) {
 	var request dto.RegisterRequest
 
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "invalid request",
-			Message: err.Error(),
-		})
+		httpresponse.BindError(c, err)
 		return
 	}
 
@@ -76,25 +72,7 @@ func (h *AuthHTTPHandler) register(c *gin.Context) {
 		},
 	)
 	if err != nil {
-		switch {
-		case errors.Is(err, apperrors.ErrUserAlreadyExists):
-			c.JSON(http.StatusConflict, dto.ErrorResponse{
-				Error:   apperrors.ErrUserAlreadyExists.Code,
-				Message: apperrors.ErrUserAlreadyExists.Message,
-			})
-		case errors.Is(err, apperrors.ErrInvalidArgument):
-			c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-				Error:   apperrors.ErrInvalidArgument.Code,
-				Message: apperrors.ErrInvalidArgument.Message,
-			})
-		default:
-			c.Error(err)
-			c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-				Error:   apperrors.ErrInternal.Code,
-				Message: apperrors.ErrInternal.Message,
-			})
-		}
-
+		httpresponse.Error(c, err)
 		return
 	}
 
@@ -122,10 +100,7 @@ func (h *AuthHTTPHandler) login(c *gin.Context) {
 	var request dto.LoginRequest
 
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "invalid request",
-			Message: err.Error(),
-		})
+		httpresponse.BindError(c, err)
 		return
 	}
 
@@ -137,18 +112,7 @@ func (h *AuthHTTPHandler) login(c *gin.Context) {
 		},
 	)
 	if err != nil {
-		if errors.Is(err, apperrors.ErrInvalidCredentials) {
-			c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
-				Error:   "unauthorized",
-				Message: "invalid login or password",
-			})
-			return
-		}
-
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "internal error",
-			Message: "something went wrong",
-		})
+		httpresponse.Error(c, err)
 		return
 	}
 
@@ -183,10 +147,7 @@ func (h *AuthHTTPHandler) logout(c *gin.Context) {
 	var request dto.LogoutRequest
 
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "invalid request",
-			Message: err.Error(),
-		})
+		httpresponse.BindError(c, err)
 		return
 	}
 
@@ -197,18 +158,7 @@ func (h *AuthHTTPHandler) logout(c *gin.Context) {
 		},
 	)
 	if err != nil {
-		if errors.Is(err, apperrors.ErrInvalidToken) || errors.Is(err, apperrors.ErrTokenMismatch) {
-			c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
-				Error:   "unauthorized",
-				Message: "invalid or expired token",
-			})
-			return
-		}
-
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "internal error",
-			Message: err.Error(),
-		})
+		httpresponse.Error(c, err)
 		return
 	}
 
@@ -222,7 +172,7 @@ func (h *AuthHTTPHandler) logout(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        request  body      dto.RefreshRequest   true  "Refresh token"
-// @Success      200      {object}  dto.RefreshResponse
+// @Success      200      {object}  dto.TokenPairResponse
 // @Failure      400      {object}  dto.ErrorResponse
 // @Failure      401      {object}  dto.ErrorResponse
 // @Failure      500      {object}  dto.ErrorResponse
@@ -231,10 +181,7 @@ func (h *AuthHTTPHandler) refresh(c *gin.Context) {
 	var request dto.RefreshRequest
 
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "invalid request",
-			Message: err.Error(),
-		})
+		httpresponse.BindError(c, err)
 		return
 	}
 
@@ -243,18 +190,7 @@ func (h *AuthHTTPHandler) refresh(c *gin.Context) {
 		entity.RefreshTokenRequest{RefreshToken: request.RefreshToken},
 	)
 	if err != nil {
-		if appErr, ok := errors.AsType[apperrors.AppError](err); ok {
-			c.JSON(appErr.HTTPCode, dto.ErrorResponse{
-				Error:   appErr.Code,
-				Message: appErr.Message,
-			})
-			return
-		}
-
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   apperrors.ErrInternal.Code,
-			Message: apperrors.ErrInternal.Message,
-		})
+		httpresponse.Error(c, err)
 		return
 	}
 

@@ -1,7 +1,7 @@
 package httpmiddleware
 
 import (
-	"errors"
+	"go_home/internal/endpoint/controller/http/httpresponse"
 	apperrors "go_home/pkg/errors"
 	"go_home/pkg/jwt"
 	"strings"
@@ -26,42 +26,27 @@ func (m *JWTAuth) Handle() gin.HandlerFunc {
 		authHeader := c.GetHeader("Authorization")
 
 		if authHeader == "" {
-			abortWithError(c, apperrors.ErrInvalidToken)
+			httpresponse.AbortWithError(c, apperrors.ErrInvalidToken)
 
 			return
 		}
-		
+
 		parts := strings.Fields(authHeader)
 		if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
-			abortWithError(c, apperrors.ErrInvalidToken)
+			httpresponse.AbortWithError(c, apperrors.ErrInvalidToken)
 
 			return
 		}
 
 		claims, err := m.jwtService.ParseAccess(parts[1])
 		if err != nil {
-			switch {
-			case errors.Is(err, jwt.ErrTokenExpired):
-				abortWithError(c, apperrors.ErrInvalidToken)
-			case errors.Is(err, jwt.ErrInvalidToken):
-				abortWithError(c, apperrors.ErrInvalidToken)
-			default:
-				abortWithError(c, apperrors.ErrInvalidToken)
-			}
+			httpresponse.AbortWithError(c, apperrors.ErrInvalidToken)
 
 			return
 		}
 		c.Set(userIDKey, claims.Subject)
 		c.Next()
 	}
-}
-
-func abortWithError(c *gin.Context, appErr apperrors.AppError) {
-	c.AbortWithStatusJSON(appErr.HTTPCode, gin.H{
-		"code":    appErr.Code,
-		"message": appErr.Message,
-		"details": appErr.Details,
-	})
 }
 
 func GetUserID(c *gin.Context) (string, bool) {
@@ -71,6 +56,6 @@ func GetUserID(c *gin.Context) (string, bool) {
 	}
 
 	userID, ok := value.(string)
-	
+
 	return userID, ok
 }

@@ -2,9 +2,9 @@ package profilehandler
 
 import (
 	"context"
-	"errors"
 	"go_home/internal/domain/dto"
 	"go_home/internal/domain/entity"
+	"go_home/internal/endpoint/controller/http/httpresponse"
 	apperrors "go_home/pkg/errors"
 	"net/http"
 	"strings"
@@ -12,7 +12,6 @@ import (
 	httpmiddleware "go_home/internal/middleware"
 
 	"github.com/gin-gonic/gin"
-	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 )
 
@@ -55,24 +54,13 @@ func (h *ProfileHTTPHandler) RegisterRoutes(router *gin.RouterGroup) {
 func (h *ProfileHTTPHandler) getMy(c *gin.Context) {
 	userID, ok := currentUserID(c)
 	if !ok {
-		respondError(c, apperrors.ErrInvalidToken)
+		httpresponse.Error(c, apperrors.ErrInvalidToken)
 		return
 	}
 
 	user, err := h.profileService.GetMyProfile(c.Request.Context(), userID)
 	if err != nil {
-		if errors.Is(err, apperrors.ErrNotFoundUser) {
-			c.JSON(http.StatusNotFound, dto.ErrorResponse{
-				Error:   "not found",
-				Message: "user not found",
-			})
-			return
-		}
-
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "internal error",
-			Message: err.Error(),
-		})
+		httpresponse.Error(c, err)
 		return
 	}
 
@@ -103,10 +91,7 @@ func (h *ProfileHTTPHandler) list(c *gin.Context) {
 	var request dto.ListUsersRequest
 
 	if err := c.ShouldBindQuery(&request); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "invalid request",
-			Message: err.Error(),
-		})
+		httpresponse.BindError(c, err)
 		return
 	}
 
@@ -119,18 +104,7 @@ func (h *ProfileHTTPHandler) list(c *gin.Context) {
 		},
 	)
 	if err != nil {
-		if appErr, ok := errors.AsType[apperrors.AppError](err); ok {
-			c.JSON(appErr.HTTPCode, dto.ErrorResponse{
-				Error:   appErr.Code,
-				Message: appErr.Message,
-			})
-			return
-		}
-
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   apperrors.ErrInternal.Code,
-			Message: apperrors.ErrInternal.Message,
-		})
+		httpresponse.Error(c, err)
 		return
 	}
 
@@ -166,23 +140,19 @@ func (h *ProfileHTTPHandler) list(c *gin.Context) {
 // @Failure      401      {object}  dto.ErrorResponse
 // @Failure      404      {object}  dto.ErrorResponse
 // @Failure      409      {object}  dto.ErrorResponse
-// @Failure      422      {object}  dto.ErrorResponse
 // @Failure      500      {object}  dto.ErrorResponse
 // @Router       /profile/my [patch]
 func (h *ProfileHTTPHandler) updateMy(c *gin.Context) {
 	userID, ok := currentUserID(c)
 	if !ok {
-		respondError(c, apperrors.ErrInvalidToken)
+		httpresponse.Error(c, apperrors.ErrInvalidToken)
 		return
 	}
 
 	var request dto.UpdateProfileRequest
 
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "invalid request",
-			Message: bindMessage(err),
-		})
+		httpresponse.BindError(c, err)
 		return
 	}
 
@@ -197,7 +167,7 @@ func (h *ProfileHTTPHandler) updateMy(c *gin.Context) {
 		},
 	)
 	if err != nil {
-		respondError(c, err)
+		httpresponse.Error(c, err)
 		return
 	}
 
@@ -223,12 +193,12 @@ func (h *ProfileHTTPHandler) updateMy(c *gin.Context) {
 func (h *ProfileHTTPHandler) deleteMy(c *gin.Context) {
 	userID, ok := currentUserID(c)
 	if !ok {
-		respondError(c, apperrors.ErrInvalidToken)
+		httpresponse.Error(c, apperrors.ErrInvalidToken)
 		return
 	}
 
 	if err := h.profileService.DeleteMyProfile(c.Request.Context(), userID); err != nil {
-		respondError(c, err)
+		httpresponse.Error(c, err)
 		return
 	}
 
@@ -247,34 +217,4 @@ func currentUserID(c *gin.Context) (uuid.UUID, bool) {
 	}
 
 	return userID, true
-}
-
-func respondError(c *gin.Context, err error) {
-	appErr, ok := errors.AsType[apperrors.AppError](err)
-	if !ok {
-		appErr = apperrors.ErrInternal
-	}
-
-	if appErr.HTTPCode >= http.StatusInternalServerError {
-		c.Error(err)
-	}
-
-	c.JSON(appErr.HTTPCode, dto.ErrorResponse{
-		Error:   appErr.Code,
-		Message: appErr.Message,
-	})
-}
-
-func bindMessage(err error) string {
-	ve, ok := errors.AsType[validator.ValidationErrors](err)
-	if !ok {
-		return "invalid request body"
-	}
-
-	parts := make([]string, 0, len(ve))
-	for _, fe := range ve {
-		parts = append(parts, strings.ToLower(fe.Field())+": "+fe.Tag())
-	}
-
-	return strings.Join(parts, ", ")
 }

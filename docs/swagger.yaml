@@ -2,12 +2,13 @@ basePath: /api/v1
 definitions:
   go_home_internal_domain_dto.ErrorResponse:
     properties:
+      details:
+        items:
+          $ref: '#/definitions/go_home_pkg_errors.FieldError'
+        type: array
       error:
-        example: invalid request
         type: string
       message:
-        example: 'Key: ''RegisterRequest.Email'' Error:Field validation for ''Email''
-          failed on the ''email'' tag'
         type: string
     type: object
   go_home_internal_domain_dto.ListUsersResponse:
@@ -56,13 +57,6 @@ definitions:
     required:
     - refresh_token
     type: object
-  go_home_internal_domain_dto.RefreshResponse:
-    properties:
-      access_token:
-        type: string
-      refresh_token:
-        type: string
-    type: object
   go_home_internal_domain_dto.RegisterRequest:
     properties:
       age:
@@ -90,7 +84,7 @@ definitions:
     - login
     - password
     type: object
-  go_home_internal_domain_dto.RegisterResponse:
+  go_home_internal_domain_dto.TokenPairResponse:
     properties:
       access_token:
         example: eyJhbGciOiJIUzI1NiIs...
@@ -102,12 +96,18 @@ definitions:
   go_home_internal_domain_dto.UpdateProfileRequest:
     properties:
       age:
+        maximum: 120
+        minimum: 1
         type: integer
       bio:
+        maxLength: 1000
         type: string
       email:
+        maxLength: 255
         type: string
       login:
+        maxLength: 64
+        minLength: 3
         type: string
     type: object
   go_home_internal_domain_dto.UserResponse:
@@ -121,6 +121,13 @@ definitions:
       id:
         type: string
       login:
+        type: string
+    type: object
+  go_home_pkg_errors.FieldError:
+    properties:
+      field:
+        type: string
+      reason:
         type: string
     type: object
 host: localhost:8080
@@ -216,7 +223,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/go_home_internal_domain_dto.RefreshResponse'
+            $ref: '#/definitions/go_home_internal_domain_dto.TokenPairResponse'
         "400":
           description: Bad Request
           schema:
@@ -250,7 +257,7 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/go_home_internal_domain_dto.RegisterResponse'
+            $ref: '#/definitions/go_home_internal_domain_dto.TokenPairResponse'
         "400":
           description: Bad Request
           schema:
@@ -395,10 +402,6 @@ paths:
             $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
         "409":
           description: Conflict
-          schema:
-            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
-        "422":
-          description: Unprocessable Entity
           schema:
             $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
         "500":

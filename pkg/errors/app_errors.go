@@ -1,10 +1,21 @@
 package apperrors
 
+type FieldError struct {
+	Field  string `json:"field"`
+	Reason string `json:"reason"`
+}
+
 type AppError struct {
 	HTTPCode int
 	Code     string
 	Message  string
-	Details  map[string]any
+	Details  []FieldError
+}
+
+func (e AppError) WithDetails(details ...FieldError) AppError {
+	e.Details = details
+
+	return e
 }
 
 func (e AppError) Error() string {
@@ -26,6 +37,11 @@ var (
 		HTTPCode: 400,
 		Code:     "invalid_argument",
 		Message:  "invalid argument provided",
+	}
+	ErrInvalidRequest = AppError{
+		HTTPCode: 400,
+		Code:     "invalid_request",
+		Message:  "invalid request",
 	}
 	ErrUserAlreadyExists = AppError{
 		HTTPCode: 409,
