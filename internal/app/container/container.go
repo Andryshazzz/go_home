@@ -113,7 +113,8 @@ func (c *Container) initHTTPServer() error {
 func (c *Container) getJWTService() (*jwt.JWTService, error) {
 	if c.jwtService == nil {
 		service, err := jwt.NewJWTService(jwt.Config{
-			Secret:            c.cfg.JWT.Secret,
+			AccessSecret:      c.cfg.JWT.AccessSecret,
+			RefreshSecret:     c.cfg.JWT.RefreshSecret,
 			AccessExpiration:  c.cfg.JWT.AccessExpiration,
 			RefreshExpiration: c.cfg.JWT.RefreshExpiration,
 		})

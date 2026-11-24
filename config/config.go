@@ -35,7 +35,8 @@ type LoggerConfig struct {
 }
 
 type JWTConfig struct {
-	Secret            string        `yaml:"secret" env:"JWT_SECRET"`
+	AccessSecret      string        `yaml:"access_secret" env:"JWT_ACCESS_SECRET"`
+	RefreshSecret     string        `yaml:"refresh_secret" env:"JWT_REFRESH_SECRET"`
 	AccessExpiration  time.Duration `yaml:"access_expiration" env:"JWT_ACCESS_EXPIRATION"`
 	RefreshExpiration time.Duration `yaml:"refresh_expiration" env:"JWT_REFRESH_EXPIRATION"`
 }

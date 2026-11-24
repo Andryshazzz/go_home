@@ -15,6 +15,7 @@ logger:
   folder: "./out/logs"
 
 jwt:
-  secret: "change-me"
+  access_secret: "change-me"
+  refresh_secret: "change-me"
   access_expiration: 15m
   refresh_expiration: 168h

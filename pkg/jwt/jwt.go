@@ -26,7 +26,8 @@ var (
 )
 
 type Config struct {
-	Secret            string
+	AccessSecret      string
+	RefreshSecret     string
 	AccessExpiration  time.Duration
 	RefreshExpiration time.Duration
 }
@@ -46,22 +47,39 @@ type TokenPair struct {
 }
 
 type JWTService struct {
-	secret            []byte
+	accessSecret      []byte
+	refreshSecret     []byte
 	accessExpiration  time.Duration
 	refreshExpiration time.Duration
 }
 
 func NewJWTService(cfg Config) (*JWTService, error) {
-	if len(cfg.Secret) < minSecretLen {
-		return nil, fmt.Errorf("%w: secret must be at least %d bytes", ErrInvalidConfig, minSecretLen)
+	if len(cfg.AccessSecret) < minSecretLen {
+		return nil, fmt.Errorf(
+			"%w: access secret must be at least %d bytes",
+			ErrInvalidConfig,
+			minSecretLen,
+		)
+	}
+
+	if len(cfg.RefreshSecret) < minSecretLen {
+		return nil, fmt.Errorf(
+			"%w: refresh secret must be at least %d bytes",
+			ErrInvalidConfig,
+			minSecretLen,
+		)
 	}
 
 	if cfg.AccessExpiration <= 0 || cfg.RefreshExpiration <= 0 {
-		return nil, fmt.Errorf("%w: expiration must be greater than zero", ErrInvalidConfig)
+		return nil, fmt.Errorf(
+			"%w: expiration must be greater than zero",
+			ErrInvalidConfig,
+		)
 	}
 
 	return &JWTService{
-		secret:            []byte(cfg.Secret),
+		accessSecret:      []byte(cfg.AccessSecret),
+		refreshSecret:     []byte(cfg.RefreshSecret),
 		accessExpiration:  cfg.AccessExpiration,
 		refreshExpiration: cfg.RefreshExpiration,
 	}, nil
@@ -98,13 +116,18 @@ func (s *JWTService) ParseRefresh(token string) (*Claims, error) {
 func (s *JWTService) AccessExpiration() time.Duration  { return s.accessExpiration }
 func (s *JWTService) RefreshExpiration() time.Duration { return s.refreshExpiration }
 
-func (s *JWTService) generate(subject, sessionID string, typ TokenType, ttl time.Duration) (string, error) {
+func (s *JWTService) generate(
+	subject, sessionID string,
+	typ TokenType,
+	ttl time.Duration,
+) (string, error) {
 	id, err := newID()
 	if err != nil {
 		return "", err
 	}
 
 	now := time.Now()
+
 	claims := Claims{
 		TokenType: typ,
 		SessionID: sessionID,
@@ -116,19 +139,40 @@ func (s *JWTService) generate(subject, sessionID string, typ TokenType, ttl time
 		},
 	}
 
-	return jwtlib.NewWithClaims(jwtlib.SigningMethodHS256, claims).SignedString(s.secret)
+	secret := s.accessSecret
+	if typ == TypeRefresh {
+		secret = s.refreshSecret
+	}
+
+	return jwtlib.NewWithClaims(
+		jwtlib.SigningMethodHS256,
+		claims,
+	).SignedString(secret)
 }
 
-func (s *JWTService) parse(tokenString string, want TokenType) (*Claims, error) {
+func (s *JWTService) parse(
+	tokenString string,
+	want TokenType,
+) (*Claims, error) {
 	claims := &Claims{}
+
+	secret := s.accessSecret
+	if want == TypeRefresh {
+		secret = s.refreshSecret
+	}
 
 	_, err := jwtlib.ParseWithClaims(
 		tokenString,
 		claims,
-		func(*jwtlib.Token) (any, error) { return s.secret, nil },
-		jwtlib.WithValidMethods([]string{jwtlib.SigningMethodHS256.Alg()}),
+		func(*jwtlib.Token) (any, error) {
+			return secret, nil
+		},
+		jwtlib.WithValidMethods(
+			[]string{jwtlib.SigningMethodHS256.Alg()},
+		),
 		jwtlib.WithExpirationRequired(),
 	)
+
 	switch {
 	case errors.Is(err, jwtlib.ErrTokenExpired):
 		return nil, ErrTokenExpired
@@ -137,7 +181,11 @@ func (s *JWTService) parse(tokenString string, want TokenType) (*Claims, error) 
 	}
 
 	if claims.TokenType != want {
-		return nil, fmt.Errorf("%w: unexpected token type %q", ErrInvalidToken, claims.TokenType)
+		return nil, fmt.Errorf(
+			"%w: unexpected token type %q",
+			ErrInvalidToken,
+			claims.TokenType,
+		)
 	}
 
 	if claims.SessionID == "" {
@@ -146,7 +194,6 @@ func (s *JWTService) parse(tokenString string, want TokenType) (*Claims, error) 
 
 	return claims, nil
 }
-
 func newID() (string, error) {
 	b := make([]byte, 16)
 	if _, err := rand.Read(b); err != nil {

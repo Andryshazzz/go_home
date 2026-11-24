@@ -65,9 +65,14 @@ func (c *Config) Validate() error {
 	}
 
 	// JWT
-	if len(c.JWT.Secret) < minJWTSecretLen {
-		add("jwt.secret", "JWT_SECRET", "must be at least %d bytes (got %d)", minJWTSecretLen, len(c.JWT.Secret))
+	if len(c.JWT.AccessSecret) < minJWTSecretLen {
+		add("jwt.access_secret", "JWT_ACCESS_SECRET", "must be at least %d bytes (got %d)", minJWTSecretLen, len(c.JWT.AccessSecret))
 	}
+
+	if len(c.JWT.RefreshSecret) < minJWTSecretLen {
+		add("jwt.refresh_secret", "JWT_REFRESH_SECRET", "must be at least %d bytes (got %d)", minJWTSecretLen, len(c.JWT.RefreshSecret))
+	}
+
 	if c.JWT.AccessExpiration <= 0 {
 		add("jwt.access_expiration", "JWT_ACCESS_EXPIRATION", "must be greater than zero (got %s)", c.JWT.AccessExpiration)
 	}
