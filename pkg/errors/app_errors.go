@@ -23,7 +23,7 @@ var (
 		Message:  "user not found",
 	}
 	ErrInvalidArgument = AppError{
-		HTTPCode: 422,
+		HTTPCode: 400,
 		Code:     "invalid_argument",
 		Message:  "invalid argument provided",
 	}

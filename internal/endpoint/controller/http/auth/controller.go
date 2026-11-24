@@ -76,10 +76,25 @@ func (h *AuthHTTPHandler) register(c *gin.Context) {
 		},
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "invalid request",
-			Message: err.Error(),
-		})
+		switch {
+		case errors.Is(err, apperrors.ErrUserAlreadyExists):
+			c.JSON(http.StatusConflict, dto.ErrorResponse{
+				Error:   apperrors.ErrUserAlreadyExists.Code,
+				Message: apperrors.ErrUserAlreadyExists.Message,
+			})
+		case errors.Is(err, apperrors.ErrInvalidArgument):
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+				Error:   apperrors.ErrInvalidArgument.Code,
+				Message: apperrors.ErrInvalidArgument.Message,
+			})
+		default:
+			c.Error(err)
+			c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
+				Error:   apperrors.ErrInternal.Code,
+				Message: apperrors.ErrInternal.Message,
+			})
+		}
+
 		return
 	}
 
