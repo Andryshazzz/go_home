@@ -12,6 +12,7 @@ import (
 	httpmiddleware "go_home/internal/middleware"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 )
 
@@ -180,7 +181,7 @@ func (h *ProfileHTTPHandler) updateMy(c *gin.Context) {
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
 			Error:   "invalid request",
-			Message: err.Error(),
+			Message: bindMessage(err),
 		})
 		return
 	}
@@ -262,4 +263,18 @@ func respondError(c *gin.Context, err error) {
 		Error:   appErr.Code,
 		Message: appErr.Message,
 	})
+}
+
+func bindMessage(err error) string {
+	ve, ok := errors.AsType[validator.ValidationErrors](err)
+	if !ok {
+		return "invalid request body"
+	}
+
+	parts := make([]string, 0, len(ve))
+	for _, fe := range ve {
+		parts = append(parts, strings.ToLower(fe.Field())+": "+fe.Tag())
+	}
+
+	return strings.Join(parts, ", ")
 }

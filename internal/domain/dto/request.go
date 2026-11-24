@@ -24,10 +24,10 @@ type ListUsersRequest struct {
 }
 
 type UpdateProfileRequest struct {
-	Login *string `json:"login"`
-	Email *string `json:"email"`
-	Age   *int    `json:"age"`
-	Bio   *string `json:"bio"`
+	Login *string `json:"login" binding:"omitempty,min=3,max=64"`
+	Email *string `json:"email" binding:"omitempty,email,max=255"`
+	Age   *int    `json:"age"   binding:"omitempty,min=1,max=120"`
+	Bio   *string `json:"bio"   binding:"omitempty,max=1000"`
 }
 
 type RefreshRequest struct {
