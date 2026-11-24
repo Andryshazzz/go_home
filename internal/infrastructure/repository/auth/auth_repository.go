@@ -7,6 +7,7 @@ import (
 	"go_home/internal/domain/entity"
 	"go_home/pkg/database"
 	apperrors "go_home/pkg/errors"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -27,15 +28,36 @@ func NewAuthRepository(
 	}
 }
 
-func (r *AuthRepository) CreateUser(
+func (r *AuthRepository) CreateUserWithSession(
 	ctx context.Context,
 	user entity.User,
-) (entity.User, error) {
-	ctx, cancel := context.WithTimeout(
-		ctx,
-		r.pool.OpTimeout(),
-	)
+	session entity.Session,
+) error {
+	ctx, cancel := context.WithTimeout(ctx, r.pool.OpTimeout())
 	defer cancel()
+
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("%w: begin registration: %w", apperrors.ErrInternal, err)
+	}
+
+	return createUserWithSession(ctx, tx, user, session, r.pool.OpTimeout())
+}
+
+func createUserWithSession(
+	ctx context.Context,
+	tx pgx.Tx,
+	user entity.User,
+	session entity.Session,
+	timeout time.Duration,
+) (err error) {
+	defer func() {
+		rollbackCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), timeout)
+		defer cancel()
+		if rollbackErr := tx.Rollback(rollbackCtx); rollbackErr != nil && !errors.Is(rollbackErr, pgx.ErrTxClosed) {
+			err = fmt.Errorf("%w: rollback registration: %w", apperrors.ErrInternal, errors.Join(err, rollbackErr))
+		}
+	}()
 
 	query := `
 		INSERT INTO users (
@@ -46,18 +68,10 @@ func (r *AuthRepository) CreateUser(
 			password_hash,
 			bio
 		)
-		VALUES ($1, $2, $3, $4, $5, $6)
-		RETURNING
-			id,
-			login,
-			email,
-			age,
-			password_hash,
-			bio;
+		VALUES ($1, $2, $3, $4, $5, $6);
 	`
 
-	var createdUser entity.User
-	err := r.pool.QueryRow(
+	_, err = tx.Exec(
 		ctx,
 		query,
 		user.ID,
@@ -66,25 +80,26 @@ func (r *AuthRepository) CreateUser(
 		user.Age,
 		user.PasswordHash,
 		user.Bio,
-	).Scan(
-		&createdUser.ID,
-		&createdUser.Login,
-		&createdUser.Email,
-		&createdUser.Age,
-		&createdUser.PasswordHash,
-		&createdUser.Bio,
 	)
 
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == uniqueViolation {
-			return entity.User{}, apperrors.ErrUserAlreadyExists
+			return apperrors.ErrUserAlreadyExists
 		}
 
-		return entity.User{}, fmt.Errorf("create user: %w", err)
+		return fmt.Errorf("%w: create user: %w", apperrors.ErrCreateUser, err)
 	}
 
-	return createdUser, nil
+	if err := createSession(ctx, tx, session); err != nil {
+		return fmt.Errorf("%w: %w", apperrors.ErrInternal, err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("%w: commit registration: %w", apperrors.ErrInternal, err)
+	}
+
+	return nil
 }
 
 func (r *AuthRepository) GetUserByLogin(
@@ -136,6 +151,14 @@ func (r *AuthRepository) CreateSession(
 	ctx, cancel := context.WithTimeout(ctx, r.pool.OpTimeout())
 	defer cancel()
 
+	return createSession(ctx, r.pool, session)
+}
+
+type sessionExecer interface {
+	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
+}
+
+func createSession(ctx context.Context, db sessionExecer, session entity.Session) error {
 	query := `
 		INSERT INTO refresh_tokens (
 			session_id,
@@ -146,7 +169,7 @@ func (r *AuthRepository) CreateSession(
 		VALUES ($1, $2, $3, $4);
 	`
 
-	if _, err := r.pool.Exec(
+	if _, err := db.Exec(
 		ctx,
 		query,
 		session.ID,

@@ -2,7 +2,6 @@ package authservice
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	entity "go_home/internal/domain/entity"
 	apperrors "go_home/pkg/errors"
@@ -42,17 +41,12 @@ func (s *AuthService) Register(
 		req.Bio,
 	)
 
-	createdUser, err := s.authRepository.CreateUser(ctx, user)
+	tokenPair, session, err := s.generateTokens(user.ID)
 	if err != nil {
-		if errors.Is(err, apperrors.ErrUserAlreadyExists) {
-			return nil, err
-		}
-
-		return nil, fmt.Errorf("%w: %w", apperrors.ErrCreateUser, err)
+		return nil, err
 	}
 
-	tokenPair, err := s.issueTokens(ctx, createdUser.ID)
-	if err != nil {
+	if err := s.authRepository.CreateUserWithSession(ctx, user, session); err != nil {
 		return nil, err
 	}
 
