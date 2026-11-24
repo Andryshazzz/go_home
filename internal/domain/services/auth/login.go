@@ -6,8 +6,7 @@ import (
 	"fmt"
 	"go_home/internal/domain/entity"
 	apperrors "go_home/pkg/errors"
-
-	"golang.org/x/crypto/bcrypt"
+	"go_home/pkg/password"
 )
 
 func (s *AuthService) Login(ctx context.Context, req entity.LoginUserRequest) (*entity.LoginUserResponse, error) {
@@ -20,15 +19,12 @@ func (s *AuthService) Login(ctx context.Context, req entity.LoginUserRequest) (*
 		return nil, fmt.Errorf("%w: %w", apperrors.ErrInternal, err)
 	}
 
-	if err := bcrypt.CompareHashAndPassword(
-		[]byte(user.PasswordHash),
-		[]byte(req.Password),
-	); err != nil {
-		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
+	if err := password.Compare(user.PasswordHash, req.Password); err != nil {
+		if errors.Is(err, password.ErrMismatch) {
 			return nil, apperrors.ErrInvalidCredentials
 		}
 
-		return nil, fmt.Errorf("%w: compare password: %w", apperrors.ErrInternal, err)
+		return nil, fmt.Errorf("%w: %w", apperrors.ErrInternal, err)
 	}
 
 	tokenPair, err := s.issueTokens(ctx, user.ID)

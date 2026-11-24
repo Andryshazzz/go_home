@@ -2,15 +2,13 @@ package authservice
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"go_home/internal/domain/entity"
 	apperrors "go_home/pkg/errors"
 	"go_home/pkg/jwt"
+	"go_home/pkg/tokenhash"
 
 	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthRepository interface {
@@ -34,21 +32,6 @@ func NewAuthService(authRepository AuthRepository, jwtService *jwt.JWTService) *
 	}
 }
 
-func hashPassword(password string) (string, error) {
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return "", fmt.Errorf("%w: %w", apperrors.ErrHashPassword, err)
-	}
-
-	return string(bytes), nil
-}
-
-func hashToken(token string) string {
-	sum := sha256.Sum256([]byte(token))
-
-	return hex.EncodeToString(sum[:])
-}
-
 func (s *AuthService) issueTokens(ctx context.Context, userID uuid.UUID) (*jwt.TokenPair, error) {
 	sessionID := uuid.New()
 
@@ -60,7 +43,7 @@ func (s *AuthService) issueTokens(ctx context.Context, userID uuid.UUID) (*jwt.T
 	if err := s.authRepository.CreateSession(ctx, entity.Session{
 		ID:        sessionID,
 		UserID:    userID,
-		TokenHash: hashToken(pair.RefreshToken),
+		TokenHash: tokenhash.Hash(pair.RefreshToken),
 		ExpiresAt: pair.RefreshExpiresAt,
 	}); err != nil {
 		return nil, fmt.Errorf("%w: create session: %w", apperrors.ErrInternal, err)

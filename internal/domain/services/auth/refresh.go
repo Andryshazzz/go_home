@@ -7,6 +7,7 @@ import (
 
 	"go_home/internal/domain/entity"
 	apperrors "go_home/pkg/errors"
+	"go_home/pkg/tokenhash"
 
 	"github.com/google/uuid"
 )
@@ -38,8 +39,8 @@ func (s *AuthService) Refresh(
 	if err := s.authRepository.RotateSession(ctx, entity.RotateSessionRequest{
 		SessionID:    sessionID,
 		UserID:       userID,
-		OldTokenHash: hashToken(req.RefreshToken),
-		NewTokenHash: hashToken(pair.RefreshToken),
+		OldTokenHash: tokenhash.Hash(req.RefreshToken),
+		NewTokenHash: tokenhash.Hash(pair.RefreshToken),
 		ExpiresAt:    pair.RefreshExpiresAt,
 	}); err != nil {
 		if errors.Is(err, apperrors.ErrInvalidToken) {

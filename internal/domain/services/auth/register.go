@@ -6,6 +6,7 @@ import (
 	"fmt"
 	entity "go_home/internal/domain/entity"
 	apperrors "go_home/pkg/errors"
+	"go_home/pkg/password"
 )
 
 func (s *AuthService) Register(
@@ -28,7 +29,7 @@ func (s *AuthService) Register(
 		return nil, apperrors.ErrInvalidArgument
 	}
 
-	passwordHash, err := hashPassword(req.Password)
+	passwordHash, err := password.Hash(req.Password)
 	if err != nil {
 		return nil, apperrors.ErrHashPassword
 	}

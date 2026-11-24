@@ -2,12 +2,13 @@ package authservice
 
 import (
 	"context"
-	"crypto/subtle"
 	"errors"
 	"fmt"
-	"github.com/google/uuid"
 	"go_home/internal/domain/entity"
 	apperrors "go_home/pkg/errors"
+	"go_home/pkg/tokenhash"
+
+	"github.com/google/uuid"
 )
 
 func (s *AuthService) Logout(ctx context.Context, req entity.LogoutUserRequest) error {
@@ -30,7 +31,7 @@ func (s *AuthService) Logout(ctx context.Context, req entity.LogoutUserRequest) 
 		return fmt.Errorf("%w: get session: %w", apperrors.ErrInternal, err)
 	}
 
-	if subtle.ConstantTimeCompare([]byte(session.TokenHash), []byte(hashToken(req.RefreshToken))) != 1 {
+	if !tokenhash.Equal(session.TokenHash, req.RefreshToken) {
 		return apperrors.ErrTokenMismatch
 	}
 
