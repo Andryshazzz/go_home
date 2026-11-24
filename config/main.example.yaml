@@ -4,13 +4,12 @@ http:
 
 postgres:
   host: "localhost"
-  port: "5432"
-  user: "user"
-  password: "password"
+  port: "5433"
+  user: "go_home"
+  password: "go_home"
   db: "go_home"
   sslmode: "disable"
   timeout: 5s
-
 logger:
   level: "DEBUG"
   folder: "./out/logs"
