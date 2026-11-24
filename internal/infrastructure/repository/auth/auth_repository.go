@@ -211,3 +211,40 @@ func (r *AuthRepository) DeleteSession(
 
 	return nil
 }
+
+func (r *AuthRepository) RotateSession(
+	ctx context.Context,
+	req entity.RotateSessionRequest,
+) error {
+	ctx, cancel := context.WithTimeout(ctx, r.pool.OpTimeout())
+	defer cancel()
+
+	query := `
+		UPDATE refresh_tokens
+		SET token_hash = $4,
+		    expires_at = $5
+		WHERE session_id = $1
+		  AND user_id    = $2
+		  AND token_hash = $3
+		  AND expires_at > now();
+	`
+
+	tag, err := r.pool.Exec(
+		ctx,
+		query,
+		req.SessionID,
+		req.UserID,
+		req.OldTokenHash,
+		req.NewTokenHash,
+		req.ExpiresAt,
+	)
+	if err != nil {
+		return fmt.Errorf("rotate session: %w", err)
+	}
+
+	if tag.RowsAffected() == 0 {
+		return apperrors.ErrInvalidToken
+	}
+
+	return nil
+}

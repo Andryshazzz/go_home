@@ -19,6 +19,7 @@ type AuthRepository interface {
 	CreateSession(ctx context.Context, session entity.Session) error
 	GetSession(ctx context.Context, id uuid.UUID) (entity.Session, error)
 	DeleteSession(ctx context.Context, id uuid.UUID) error
+	RotateSession(ctx context.Context, req entity.RotateSessionRequest) error
 }
 
 type AuthService struct {

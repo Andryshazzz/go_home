@@ -29,3 +29,7 @@ type UpdateProfileRequest struct {
 	Age   *int    `json:"age"`
 	Bio   *string `json:"bio"`
 }
+
+type RefreshRequest struct {
+	RefreshToken string `json:"refresh_token" binding:"required"`
+}

@@ -1,6 +1,10 @@
 package entity
 
-import "github.com/google/uuid"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type RegisterUserRequest struct {
 	Login    string
@@ -31,4 +35,16 @@ type UpdateProfileRequest struct {
 	Email  *string
 	Age    *int
 	Bio    *string
+}
+
+type RefreshTokenRequest struct {
+	RefreshToken string
+}
+
+type RotateSessionRequest struct {
+	SessionID    uuid.UUID
+	UserID       uuid.UUID
+	OldTokenHash string
+	NewTokenHash string
+	ExpiresAt    time.Time
 }

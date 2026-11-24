@@ -15,3 +15,8 @@ type ListUsersResponse struct {
 	Users []User
 	Total int
 }
+
+type RefreshTokenResponse struct {
+	AccessToken  string
+	RefreshToken string
+}

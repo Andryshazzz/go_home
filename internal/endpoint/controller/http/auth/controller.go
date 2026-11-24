@@ -15,6 +15,7 @@ type AuthService interface {
 	Register(ctx context.Context, req entity.RegisterUserRequest) (*entity.RegisterUserResponse, error)
 	Login(ctx context.Context, req entity.LoginUserRequest) (*entity.LoginUserResponse, error)
 	Logout(ctx context.Context, req entity.LogoutUserRequest) error
+	Refresh(ctx context.Context, req entity.RefreshTokenRequest) (*entity.RefreshTokenResponse, error)
 }
 
 type AuthHTTPHandler struct {
@@ -35,6 +36,7 @@ func (h *AuthHTTPHandler) RegisterRoutes(router *gin.RouterGroup) {
 		auth.POST("/register", h.register)
 		auth.POST("/login", h.login)
 		auth.POST("/logout", h.logout)
+		auth.POST("/refresh", h.refresh)
 	}
 }
 
@@ -180,7 +182,7 @@ func (h *AuthHTTPHandler) logout(c *gin.Context) {
 		},
 	)
 	if err != nil {
-		if errors.Is(err, apperrors.ErrInvalidToken) {
+		if errors.Is(err, apperrors.ErrInvalidToken) || errors.Is(err, apperrors.ErrTokenMismatch) {
 			c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
 				Error:   "unauthorized",
 				Message: "invalid or expired token",
@@ -196,4 +198,53 @@ func (h *AuthHTTPHandler) logout(c *gin.Context) {
 	}
 
 	c.Status(http.StatusNoContent)
+}
+
+// refresh godoc
+// @Summary      Refresh tokens
+// @Description  Exchanges a valid refresh token for a new access/refresh pair. The old refresh token stops working immediately.
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        request  body      dto.RefreshRequest   true  "Refresh token"
+// @Success      200      {object}  dto.RefreshResponse
+// @Failure      400      {object}  dto.ErrorResponse
+// @Failure      401      {object}  dto.ErrorResponse
+// @Failure      500      {object}  dto.ErrorResponse
+// @Router       /auth/refresh [post]
+func (h *AuthHTTPHandler) refresh(c *gin.Context) {
+	var request dto.RefreshRequest
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "invalid request",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	response, err := h.authService.Refresh(
+		c.Request.Context(),
+		entity.RefreshTokenRequest{RefreshToken: request.RefreshToken},
+	)
+	if err != nil {
+		if appErr, ok := errors.AsType[apperrors.AppError](err); ok {
+			c.JSON(appErr.HTTPCode, dto.ErrorResponse{
+				Error:   appErr.Code,
+				Message: appErr.Message,
+			})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
+			Error:   apperrors.ErrInternal.Code,
+			Message: apperrors.ErrInternal.Message,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.RefreshResponse{
+		AccessToken:  response.AccessToken,
+		RefreshToken: response.RefreshToken,
+	})
 }

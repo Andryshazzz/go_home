@@ -26,6 +26,11 @@ type ListUsersResponse struct {
 	Offset int            `json:"offset"`
 }
 
+type RefreshResponse struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+}
+
 type ErrorResponse struct {
 	Error   string `json:"error" example:"invalid request"`
 	Message string `json:"message,omitempty" example:"Key: 'RegisterRequest.Email' Error:Field validation for 'Email' failed on the 'email' tag"`
