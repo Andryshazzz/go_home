@@ -14,7 +14,7 @@ import (
 func (s *AuthService) Refresh(
 	ctx context.Context,
 	req entity.RefreshTokenRequest,
-) (*entity.RefreshTokenResponse, error) {
+) (*entity.TokenPairResponse, error) {
 	claims, err := s.jwtService.ParseRefresh(req.RefreshToken)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", apperrors.ErrInvalidToken, err)
@@ -49,7 +49,7 @@ func (s *AuthService) Refresh(
 		return nil, fmt.Errorf("%w: rotate session: %w", apperrors.ErrInternal, err)
 	}
 
-	return &entity.RefreshTokenResponse{
+	return &entity.TokenPairResponse{
 		AccessToken:  pair.AccessToken,
 		RefreshToken: pair.RefreshToken,
 	}, nil

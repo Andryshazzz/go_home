@@ -12,10 +12,10 @@ import (
 )
 
 type AuthService interface {
-	Register(ctx context.Context, req entity.RegisterUserRequest) (*entity.RegisterUserResponse, error)
+	Register(ctx context.Context, req entity.RegisterUserRequest) (*entity.TokenPairResponse, error)
 	Login(ctx context.Context, req entity.LoginUserRequest) (*entity.LoginUserResponse, error)
 	Logout(ctx context.Context, req entity.LogoutUserRequest) error
-	Refresh(ctx context.Context, req entity.RefreshTokenRequest) (*entity.RefreshTokenResponse, error)
+	Refresh(ctx context.Context, req entity.RefreshTokenRequest) (*entity.TokenPairResponse, error)
 }
 
 type AuthHTTPHandler struct {
@@ -98,7 +98,7 @@ func (h *AuthHTTPHandler) register(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, dto.RegisterResponse{
+	c.JSON(http.StatusCreated, dto.TokenPairResponse{
 		AccessToken:  response.AccessToken,
 		RefreshToken: response.RefreshToken,
 	})
@@ -258,7 +258,7 @@ func (h *AuthHTTPHandler) refresh(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, dto.RefreshResponse{
+	c.JSON(http.StatusOK, dto.TokenPairResponse{
 		AccessToken:  response.AccessToken,
 		RefreshToken: response.RefreshToken,
 	})

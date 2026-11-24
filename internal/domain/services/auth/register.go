@@ -11,7 +11,7 @@ import (
 func (s *AuthService) Register(
 	ctx context.Context,
 	req entity.RegisterUserRequest,
-) (*entity.RegisterUserResponse, error) {
+) (*entity.TokenPairResponse, error) {
 	if req.Login == "" {
 		return nil, apperrors.ErrInvalidArgument
 	}
@@ -55,7 +55,7 @@ func (s *AuthService) Register(
 		return nil, err
 	}
 
-	return &entity.RegisterUserResponse{
+	return &entity.TokenPairResponse{
 		AccessToken:  tokenPair.AccessToken,
 		RefreshToken: tokenPair.RefreshToken,
 	}, nil

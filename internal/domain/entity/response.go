@@ -1,6 +1,6 @@
 package entity
 
-type RegisterUserResponse struct {
+type TokenPairResponse struct {
 	AccessToken  string
 	RefreshToken string
 }
@@ -14,9 +14,4 @@ type LoginUserResponse struct {
 type ListUsersResponse struct {
 	Users []User
 	Total int
-}
-
-type RefreshTokenResponse struct {
-	AccessToken  string
-	RefreshToken string
 }

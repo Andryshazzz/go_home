@@ -1,6 +1,6 @@
 package dto
 
-type RegisterResponse struct {
+type TokenPairResponse struct {
 	AccessToken  string `json:"access_token"  example:"eyJhbGciOiJIUzI1NiIs..."`
 	RefreshToken string `json:"refresh_token" example:"eyJhbGciOiJIUzI1NiIs..."`
 }
@@ -25,12 +25,6 @@ type ListUsersResponse struct {
 	Limit  int            `json:"limit"`
 	Offset int            `json:"offset"`
 }
-
-type RefreshResponse struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-}
-
 type ErrorResponse struct {
 	Error   string `json:"error" example:"invalid request"`
 	Message string `json:"message,omitempty" example:"Key: 'RegisterRequest.Email' Error:Field validation for 'Email' failed on the 'email' tag"`
