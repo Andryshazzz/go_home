@@ -8,8 +8,8 @@ CREATE TABLE users (
     deleted_at    TIMESTAMPTZ   NULL
 );
 
-CREATE UNIQUE INDEX users_login_key ON users (login);
-CREATE UNIQUE INDEX users_email_key ON users (lower(email));
+CREATE UNIQUE INDEX users_login_key ON users (login) WHERE deleted_at IS NULL;
+CREATE UNIQUE INDEX users_email_key ON users (lower(email)) WHERE deleted_at IS NULL;
 
 CREATE TABLE refresh_tokens (
     session_id UUID        PRIMARY KEY,
