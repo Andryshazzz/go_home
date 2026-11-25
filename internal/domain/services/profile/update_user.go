@@ -5,9 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"go_home/internal/domain/entity"
+	"go_home/internal/domain/validation"
 	apperrors "go_home/pkg/errors"
-	"strings"
-	"unicode/utf8"
 )
 
 func (s *ProfileService) UpdateMyProfile(
@@ -19,11 +18,31 @@ func (s *ProfileService) UpdateMyProfile(
 	}
 
 	if req.Login != nil {
-		login := strings.TrimSpace(*req.Login)
-		if utf8.RuneCountInString(login) < 3 {
-			return entity.User{}, apperrors.ErrInvalidArgument
+		login, err := validation.Login(*req.Login)
+		if err != nil {
+			return entity.User{}, err
 		}
 		req.Login = &login
+	}
+
+	if req.Email != nil {
+		email, err := validation.Email(*req.Email)
+		if err != nil {
+			return entity.User{}, err
+		}
+		req.Email = &email
+	}
+
+	if req.Age != nil {
+		if err := validation.Age(*req.Age); err != nil {
+			return entity.User{}, err
+		}
+	}
+
+	if req.Bio != nil {
+		if err := validation.Bio(*req.Bio); err != nil {
+			return entity.User{}, err
+		}
 	}
 
 	user, err := s.profileRepository.UpdateUser(ctx, req)

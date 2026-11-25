@@ -2,8 +2,10 @@ package authservice
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	entity "go_home/internal/domain/entity"
+	"go_home/internal/domain/entity"
+	"go_home/internal/domain/validation"
 	apperrors "go_home/pkg/errors"
 	"go_home/pkg/password"
 )
@@ -12,20 +14,26 @@ func (s *AuthService) Register(
 	ctx context.Context,
 	req entity.RegisterUserRequest,
 ) (*entity.TokenPairResponse, error) {
-	if req.Login == "" {
-		return nil, apperrors.ErrInvalidArgument
+	login, err := validation.Login(req.Login)
+	if err != nil {
+		return nil, err
 	}
-	if req.Email == "" {
-		return nil, apperrors.ErrInvalidArgument
+
+	email, err := validation.Email(req.Email)
+	if err != nil {
+		return nil, err
 	}
-	if len(req.Password) < 8 || len(req.Password) > 72 {
-		return nil, apperrors.ErrInvalidArgument
+
+	if err := validation.Password(req.Password); err != nil {
+		return nil, err
 	}
-	if req.Age <= 0 || req.Age > 120 {
-		return nil, apperrors.ErrInvalidArgument
+
+	if err := validation.Age(req.Age); err != nil {
+		return nil, err
 	}
-	if len([]rune(req.Bio)) > 1000 {
-		return nil, apperrors.ErrInvalidArgument
+
+	if err := validation.Bio(req.Bio); err != nil {
+		return nil, err
 	}
 
 	passwordHash, err := password.Hash(req.Password)
@@ -33,25 +41,23 @@ func (s *AuthService) Register(
 		return nil, fmt.Errorf("%w: %w", apperrors.ErrHashPassword, err)
 	}
 
-	user := entity.NewUser(
-		req.Login,
-		req.Email,
-		req.Age,
-		string(passwordHash),
-		req.Bio,
-	)
+	user := entity.NewUser(login, email, req.Age, passwordHash, req.Bio)
 
-	tokenPair, session, err := s.generateTokens(user.ID)
+	pair, session, err := s.generateTokens(user.ID)
 	if err != nil {
 		return nil, err
 	}
 
 	if err := s.authRepository.CreateUserWithSession(ctx, user, session); err != nil {
-		return nil, err
+		if errors.Is(err, apperrors.ErrUserAlreadyExists) {
+			return nil, err
+		}
+
+		return nil, fmt.Errorf("%w: %w", apperrors.ErrCreateUser, err)
 	}
 
 	return &entity.TokenPairResponse{
-		AccessToken:  tokenPair.AccessToken,
-		RefreshToken: tokenPair.RefreshToken,
+		AccessToken:  pair.AccessToken,
+		RefreshToken: pair.RefreshToken,
 	}, nil
 }
