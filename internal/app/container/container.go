@@ -21,6 +21,7 @@ import (
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+	"go.uber.org/zap"
 )
 
 type Container struct {
@@ -28,7 +29,7 @@ type Container struct {
 	logger     *logger.Logger
 	pool       *database.ConnectionPool
 	server     *httpserver.HTTPServer
-	jwtService *jwt.JWTService
+	jwtService *jwt.Service
 
 	authRepository *authrepository.AuthRepository
 	authService    *authservice.AuthService
@@ -48,15 +49,35 @@ func (c *Container) Start(ctx context.Context) error {
 		return fmt.Errorf("init logger: %w", err)
 	}
 
+	c.logger.Info("application starting",
+		zap.String("http_addr", c.cfg.HTTP.Addr),
+		zap.Duration("shutdown_timeout", c.cfg.HTTP.ShutdownTimeout),
+	)
+
 	if err := c.initDatabase(ctx); err != nil {
+		c.logger.Error("init database failed", zap.Error(err))
 		return fmt.Errorf("init database: %w", err)
 	}
+	c.logger.Info("database connected",
+		zap.String("host", c.cfg.Postgres.Host),
+		zap.String("port", c.cfg.Postgres.Port),
+		zap.String("db", c.cfg.Postgres.DB),
+	)
 
 	if err := c.initHTTPServer(); err != nil {
+		c.logger.Error("init HTTP server failed", zap.Error(err))
 		return fmt.Errorf("init HTTP server: %w", err)
 	}
 
-	return c.server.Run(ctx)
+	err := c.server.Run(ctx)
+
+	if err != nil {
+		c.logger.Error("application stopped with error", zap.Error(err))
+	} else {
+		c.logger.Info("application stopped")
+	}
+
+	return err
 }
 
 func (c *Container) Stop() {
@@ -110,7 +131,7 @@ func (c *Container) initHTTPServer() error {
 	return nil
 
 }
-func (c *Container) getJWTService() (*jwt.JWTService, error) {
+func (c *Container) getJWTService() (*jwt.Service, error) {
 	if c.jwtService == nil {
 		service, err := jwt.NewJWTService(jwt.Config{
 			AccessSecret:      c.cfg.JWT.AccessSecret,
@@ -183,8 +204,9 @@ func (c *Container) getHTTPServer() (*httpserver.HTTPServer, error) {
 
 	router := server.Router()
 
-	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
+	router.Use(httpmiddleware.RequestID())
+	router.Use(httpmiddleware.RequestLogger(log))
 
 	c.registerSwagger(router)
 

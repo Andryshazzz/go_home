@@ -1,3 +1,0 @@
-2026-11-24T18-52:09.850499	INFO	server/server.go:44	starting HTTP server	{"addr": ":8080"}
-2026-11-24T18-53:58.926713	INFO	server/server.go:63	starting HTTP server graceful shutdown	{"timeout": "10s"}
-2026-11-24T18-53:58.927186	INFO	server/server.go:82	HTTP server stopped gracefully

@@ -7,15 +7,16 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 const userIDKey = "user_id"
 
 type JWTAuth struct {
-	jwtService *jwt.JWTService
+	jwtService *jwt.Service
 }
 
-func NewJWTAuth(jwtService *jwt.JWTService) *JWTAuth {
+func NewJWTAuth(jwtService *jwt.Service) *JWTAuth {
 	return &JWTAuth{
 		jwtService: jwtService,
 	}
@@ -26,6 +27,7 @@ func (m *JWTAuth) Handle() gin.HandlerFunc {
 		authHeader := c.GetHeader("Authorization")
 
 		if authHeader == "" {
+			LoggerFromGin(c).Warn("missing authorization header")
 			httpresponse.AbortWithError(c, apperrors.ErrInvalidToken)
 
 			return
@@ -33,6 +35,7 @@ func (m *JWTAuth) Handle() gin.HandlerFunc {
 
 		parts := strings.Fields(authHeader)
 		if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+			LoggerFromGin(c).Warn("malformed authorization header")
 			httpresponse.AbortWithError(c, apperrors.ErrInvalidToken)
 
 			return
@@ -40,10 +43,12 @@ func (m *JWTAuth) Handle() gin.HandlerFunc {
 
 		claims, err := m.jwtService.ParseAccess(parts[1])
 		if err != nil {
+			LoggerFromGin(c).Warn("invalid access token", zap.Error(err))
 			httpresponse.AbortWithError(c, apperrors.ErrInvalidToken)
 
 			return
 		}
+
 		c.Set(userIDKey, claims.Subject)
 		c.Next()
 	}

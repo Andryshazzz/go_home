@@ -6,6 +6,22 @@ CONFIG ?= ./config/main.yaml
 run:
 	go run ./cmd -config=$(CONFIG)
 
+test:
+	go test ./... -race -cover
+
+lint:
+	golangci-lint run ./...
+
+lint-fix:
+	golangci-lint run --fix ./...
+
+fmt:
+	golangci-lint fmt ./...
+
+install-hooks:
+	git config core.hooksPath .githooks
+	chmod +x .githooks/*
+
 db-up:
 	docker compose up -d postgres
 

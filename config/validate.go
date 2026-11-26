@@ -97,7 +97,7 @@ func validateAddr(addr string) error {
 
 	_, port, err := net.SplitHostPort(addr)
 	if err != nil {
-		return fmt.Errorf(`must be in host:port form, e.g. ":8080" (%v)`, err)
+		return fmt.Errorf(`must be in host:port form, e.g. ":8080" (%w)`, err)
 	}
 
 	return validatePort(port)
