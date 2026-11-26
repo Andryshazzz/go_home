@@ -22,10 +22,10 @@ type AuthRepository interface {
 
 type AuthService struct {
 	authRepository AuthRepository
-	jwtService     *jwt.JWTService
+	jwtService     *jwt.Service
 }
 
-func NewAuthService(authRepository AuthRepository, jwtService *jwt.JWTService) *AuthService {
+func NewAuthService(authRepository AuthRepository, jwtService *jwt.Service) *AuthService {
 	return &AuthService{
 		authRepository: authRepository,
 		jwtService:     jwtService,

@@ -28,7 +28,7 @@ type Container struct {
 	logger     *logger.Logger
 	pool       *database.ConnectionPool
 	server     *httpserver.HTTPServer
-	jwtService *jwt.JWTService
+	jwtService *jwt.Service
 
 	authRepository *authrepository.AuthRepository
 	authService    *authservice.AuthService
@@ -110,7 +110,7 @@ func (c *Container) initHTTPServer() error {
 	return nil
 
 }
-func (c *Container) getJWTService() (*jwt.JWTService, error) {
+func (c *Container) getJWTService() (*jwt.Service, error) {
 	if c.jwtService == nil {
 		service, err := jwt.NewJWTService(jwt.Config{
 			AccessSecret:      c.cfg.JWT.AccessSecret,

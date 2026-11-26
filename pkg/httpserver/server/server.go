@@ -35,8 +35,10 @@ func NewHTTPServer(config Config, logger *logger.Logger) *HTTPServer {
 
 func (h *HTTPServer) Run(ctx context.Context) error {
 	server := &http.Server{
-		Addr:    h.config.Addr,
-		Handler: h.router,
+		Addr:              h.config.Addr,
+		Handler:           h.router,
+		ReadHeaderTimeout: 5 * time.Second,
+		IdleTimeout:       60 * time.Second,
 	}
 
 	errCh := make(chan error, 1)

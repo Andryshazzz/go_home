@@ -25,3 +25,21 @@
    ```bash
    go run ./cmd -config ./config/main.yaml
    ```
+
+4. Linting
+
+The project uses [golangci-lint](https://golangci-lint.run) v2 (config: `.golangci.yml`).
+
+```bash
+make lint        # check
+make lint-fix    # check and fix what can be fixed automatically
+make fmt         # format the code
+```
+
+A pre-commit hook runs the linter before every commit. Install it once after cloning:
+
+```bash
+make install-hooks
+```
+
+The hooks live in `.githooks/`: `pre-commit` runs the linter, `pre-push` runs the tests.

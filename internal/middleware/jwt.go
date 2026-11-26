@@ -12,10 +12,10 @@ import (
 const userIDKey = "user_id"
 
 type JWTAuth struct {
-	jwtService *jwt.JWTService
+	jwtService *jwt.Service
 }
 
-func NewJWTAuth(jwtService *jwt.JWTService) *JWTAuth {
+func NewJWTAuth(jwtService *jwt.Service) *JWTAuth {
 	return &JWTAuth{
 		jwtService: jwtService,
 	}

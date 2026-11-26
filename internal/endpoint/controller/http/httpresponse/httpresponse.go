@@ -48,7 +48,7 @@ func build(c *gin.Context, err error) (int, dto.ErrorResponse) {
 	}
 
 	if appErr.HTTPCode >= 500 {
-		c.Error(err)
+		_ = c.Error(err)
 	}
 
 	return appErr.HTTPCode, dto.ErrorResponse{

@@ -27,7 +27,7 @@ func NewLogger(config Config) (*Logger, error) {
 		return nil, fmt.Errorf("unmarshal log level: %w", err)
 	}
 
-	if err := os.MkdirAll(config.Folder, 0755); err != nil {
+	if err := os.MkdirAll(config.Folder, 0o750); err != nil {
 		return nil, fmt.Errorf("mkdir log folder: %w", err)
 	}
 
@@ -37,14 +37,14 @@ func NewLogger(config Config) (*Logger, error) {
 		fmt.Sprintf("%s.log", timestamp),
 	)
 
-	logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY, 0644)
+	logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 	if err != nil {
 		return nil, fmt.Errorf("open log file: %w", err)
 	}
 
 	defer func() {
 		if err != nil {
-			logFile.Close()
+			_ = logFile.Close()
 		}
 	}()
 

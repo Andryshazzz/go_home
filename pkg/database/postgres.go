@@ -44,19 +44,19 @@ func NewConnectionPool(
 	pgxconfig, err := pgxpool.ParseConfig(cfg.dsn())
 
 	if err != nil {
-		return nil, fmt.Errorf("Parse pgxconfig: %w", err)
+		return nil, fmt.Errorf("parse pgxconfig: %w", err)
 	}
 
 	pool, err := pgxpool.NewWithConfig(ctx, pgxconfig)
 
 	if err != nil {
-		return nil, fmt.Errorf("Сreate pgxpool: %w", err)
+		return nil, fmt.Errorf("create pgxpool: %w", err)
 	}
 
 	if err := pool.Ping(ctx); err != nil {
 		pool.Close()
 
-		return nil, fmt.Errorf("Pgxpool ping: %w", err)
+		return nil, fmt.Errorf("pgxpool ping: %w", err)
 	}
 
 	return &ConnectionPool{

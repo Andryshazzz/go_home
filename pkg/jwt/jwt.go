@@ -46,14 +46,14 @@ type TokenPair struct {
 	RefreshExpiresAt time.Time `json:"refresh_expires_at"`
 }
 
-type JWTService struct {
+type Service struct {
 	accessSecret      []byte
 	refreshSecret     []byte
 	accessExpiration  time.Duration
 	refreshExpiration time.Duration
 }
 
-func NewJWTService(cfg Config) (*JWTService, error) {
+func NewJWTService(cfg Config) (*Service, error) {
 	if len(cfg.AccessSecret) < minSecretLen {
 		return nil, fmt.Errorf(
 			"%w: access secret must be at least %d bytes",
@@ -77,7 +77,7 @@ func NewJWTService(cfg Config) (*JWTService, error) {
 		)
 	}
 
-	return &JWTService{
+	return &Service{
 		accessSecret:      []byte(cfg.AccessSecret),
 		refreshSecret:     []byte(cfg.RefreshSecret),
 		accessExpiration:  cfg.AccessExpiration,
@@ -85,7 +85,7 @@ func NewJWTService(cfg Config) (*JWTService, error) {
 	}, nil
 }
 
-func (s *JWTService) GenerateTokenPair(subject, sessionID string) (*TokenPair, error) {
+func (s *Service) GenerateTokenPair(subject, sessionID string) (*TokenPair, error) {
 	access, err := s.generate(subject, sessionID, TypeAccess, s.accessExpiration)
 	if err != nil {
 		return nil, fmt.Errorf("generate access token: %w", err)
@@ -105,18 +105,18 @@ func (s *JWTService) GenerateTokenPair(subject, sessionID string) (*TokenPair, e
 	}, nil
 }
 
-func (s *JWTService) ParseAccess(token string) (*Claims, error) {
+func (s *Service) ParseAccess(token string) (*Claims, error) {
 	return s.parse(token, TypeAccess)
 }
 
-func (s *JWTService) ParseRefresh(token string) (*Claims, error) {
+func (s *Service) ParseRefresh(token string) (*Claims, error) {
 	return s.parse(token, TypeRefresh)
 }
 
-func (s *JWTService) AccessExpiration() time.Duration  { return s.accessExpiration }
-func (s *JWTService) RefreshExpiration() time.Duration { return s.refreshExpiration }
+func (s *Service) AccessExpiration() time.Duration  { return s.accessExpiration }
+func (s *Service) RefreshExpiration() time.Duration { return s.refreshExpiration }
 
-func (s *JWTService) generate(
+func (s *Service) generate(
 	subject, sessionID string,
 	typ TokenType,
 	ttl time.Duration,
@@ -150,7 +150,7 @@ func (s *JWTService) generate(
 	).SignedString(secret)
 }
 
-func (s *JWTService) parse(
+func (s *Service) parse(
 	tokenString string,
 	want TokenType,
 ) (*Claims, error) {

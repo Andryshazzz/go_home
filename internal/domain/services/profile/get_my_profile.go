@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/google/uuid"
 	"go_home/internal/domain/entity"
 	apperrors "go_home/pkg/errors"
+
+	"github.com/google/uuid"
 )
 
 func (s *ProfileService) GetMyProfile(ctx context.Context, userID uuid.UUID) (entity.User, error) {
