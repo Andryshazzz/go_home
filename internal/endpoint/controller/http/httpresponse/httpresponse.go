@@ -7,18 +7,22 @@ import (
 
 	"go_home/internal/domain/dto"
 	apperrors "go_home/pkg/errors"
+	"go_home/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"go.uber.org/zap"
 )
 
 func Error(c *gin.Context, err error) {
 	status, body := build(c, err)
+	logHTTPError(c, status, err)
 	c.JSON(status, body)
 }
 
 func AbortWithError(c *gin.Context, err error) {
 	status, body := build(c, err)
+	logHTTPError(c, status, err)
 	c.AbortWithStatusJSON(status, body)
 }
 
@@ -72,4 +76,25 @@ func snakeCase(s string) string {
 	}
 
 	return b.String()
+}
+
+func logHTTPError(c *gin.Context, status int, err error) {
+	log := logger.FromContext(c.Request.Context())
+
+	fields := []zap.Field{
+		zap.Int("status", status),
+		zap.Error(err),
+	}
+	if appErr, ok := errors.AsType[apperrors.AppError](err); ok {
+		fields = append(fields,
+			zap.String("error_code", appErr.Code),
+			zap.String("error_message", appErr.Message),
+		)
+	}
+
+	if status >= 500 {
+		log.Error("http request failed", fields...)
+	} else {
+		log.Warn("http request rejected", fields...)
+	}
 }
