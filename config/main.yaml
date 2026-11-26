@@ -1,0 +1,22 @@
+http:
+  addr: ":8080"
+  shutdown_timeout: 10s
+
+postgres:
+  host: "localhost"
+  port: "5433"
+  user: "go_home_local"
+  password: "go_home_local_password"
+  db: "go_home_local_db"
+  sslmode: "disable"
+  timeout: 5s
+
+logger:
+  level: "DEBUG"
+  folder: "./out/logs"
+
+jwt:
+  access_secret: "AI6WhhfRgipwA7jfi4KTiP5oTwhC9y/hct9Gs/crmRc="
+  refresh_secret: "5c029051b50b7ca23a025c60934e8f12e2fcde25e19a3ce74a7b99c674cae1a5"
+  access_expiration: 15m
+  refresh_expiration: 168h
