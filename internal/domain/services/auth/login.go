@@ -1,0 +1,40 @@
+package authservice
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"go_home/internal/domain/entity"
+	apperrors "go_home/pkg/errors"
+	"go_home/pkg/password"
+)
+
+func (s *AuthService) Login(ctx context.Context, req entity.LoginUserRequest) (*entity.LoginUserResponse, error) {
+	user, err := s.authRepository.GetUserByLogin(ctx, req.Login)
+	if err != nil {
+		if errors.Is(err, apperrors.ErrNotFoundUser) {
+			return nil, apperrors.ErrInvalidCredentials
+		}
+
+		return nil, fmt.Errorf("%w: %w", apperrors.ErrInternal, err)
+	}
+
+	if err := password.Compare(user.PasswordHash, req.Password); err != nil {
+		if errors.Is(err, password.ErrMismatch) {
+			return nil, apperrors.ErrInvalidCredentials
+		}
+
+		return nil, fmt.Errorf("%w: %w", apperrors.ErrInternal, err)
+	}
+
+	tokenPair, err := s.issueTokens(ctx, user.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &entity.LoginUserResponse{
+		User:         user,
+		AccessToken:  tokenPair.AccessToken,
+		RefreshToken: tokenPair.RefreshToken,
+	}, nil
+}

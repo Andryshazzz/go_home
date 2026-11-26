@@ -1,0 +1,21 @@
+http:
+  addr: ":8080"
+  shutdown_timeout: 10s
+
+postgres:
+  host: "localhost"
+  port: "5433"
+  user: "go_home"
+  password: "go_home"
+  db: "go_home"
+  sslmode: "disable"
+  timeout: 5s
+logger:
+  level: "DEBUG"
+  folder: "./out/logs"
+
+jwt:
+  access_secret: "change-me"
+  refresh_secret: "change-me"
+  access_expiration: 15m
+  refresh_expiration: 168h

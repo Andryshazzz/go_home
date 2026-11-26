@@ -1,0 +1,421 @@
+basePath: /api/v1
+definitions:
+  go_home_internal_domain_dto.ErrorResponse:
+    properties:
+      details:
+        items:
+          $ref: '#/definitions/go_home_pkg_errors.FieldError'
+        type: array
+      error:
+        type: string
+      message:
+        type: string
+    type: object
+  go_home_internal_domain_dto.ListUsersResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/go_home_internal_domain_dto.UserResponse'
+        type: array
+      limit:
+        type: integer
+      offset:
+        type: integer
+      total:
+        type: integer
+    type: object
+  go_home_internal_domain_dto.LoginRequest:
+    properties:
+      login:
+        type: string
+      password:
+        type: string
+    required:
+    - login
+    - password
+    type: object
+  go_home_internal_domain_dto.LoginResponse:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+      user:
+        $ref: '#/definitions/go_home_internal_domain_dto.UserResponse'
+    type: object
+  go_home_internal_domain_dto.LogoutRequest:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  go_home_internal_domain_dto.RefreshRequest:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  go_home_internal_domain_dto.RegisterRequest:
+    properties:
+      age:
+        example: 25
+        type: integer
+      bio:
+        example: Hello, I am Ivan
+        maxLength: 1000
+        type: string
+      email:
+        example: ivan@example.com
+        type: string
+      login:
+        example: ivan
+        maxLength: 64
+        minLength: 3
+        type: string
+      password:
+        example: Str0ngPass!
+        minLength: 8
+        type: string
+    required:
+    - age
+    - email
+    - login
+    - password
+    type: object
+  go_home_internal_domain_dto.TokenPairResponse:
+    properties:
+      access_token:
+        example: eyJhbGciOiJIUzI1NiIs...
+        type: string
+      refresh_token:
+        example: eyJhbGciOiJIUzI1NiIs...
+        type: string
+    type: object
+  go_home_internal_domain_dto.UpdateProfileRequest:
+    properties:
+      age:
+        maximum: 120
+        minimum: 1
+        type: integer
+      bio:
+        maxLength: 1000
+        type: string
+      email:
+        maxLength: 255
+        type: string
+      login:
+        maxLength: 64
+        minLength: 3
+        type: string
+    type: object
+  go_home_internal_domain_dto.UserResponse:
+    properties:
+      age:
+        type: integer
+      bio:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      login:
+        type: string
+    type: object
+  go_home_pkg_errors.FieldError:
+    properties:
+      field:
+        type: string
+      reason:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: User service API.
+  title: go_home API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates a user by login and password and returns a new access/refresh
+        token pair.
+      parameters:
+      - description: Credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/go_home_internal_domain_dto.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+      summary: Log in
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Invalidates the given refresh token.
+      parameters:
+      - description: Refresh token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/go_home_internal_domain_dto.LogoutRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+      summary: Log out
+      tags:
+      - auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Exchanges a valid refresh token for a new access/refresh pair.
+        The old refresh token stops working immediately.
+      parameters:
+      - description: Refresh token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/go_home_internal_domain_dto.RefreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.TokenPairResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+      summary: Refresh tokens
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Creates a user and returns an access/refresh token pair.
+      parameters:
+      - description: Registration data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/go_home_internal_domain_dto.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.TokenPairResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+      summary: Register a new user
+      tags:
+      - auth
+  /profile:
+    get:
+      description: Returns a paginated list of users. Optional case-insensitive search
+        by login.
+      parameters:
+      - description: Login search (substring)
+        in: query
+        name: login
+        type: string
+      - default: 20
+        description: Page size
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ListUsersResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List users
+      tags:
+      - profile
+  /profile/my:
+    delete:
+      description: Soft-deletes the current user. The account can no longer log in
+        or be listed.
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete my profile
+      tags:
+      - profile
+    get:
+      description: Returns the profile of the currently authenticated user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.UserResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get my profile
+      tags:
+      - profile
+    patch:
+      consumes:
+      - application/json
+      description: Partially updates the profile of the current user. Only the provided
+        fields are changed.
+      parameters:
+      - description: Fields to update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/go_home_internal_domain_dto.UpdateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update my profile
+      tags:
+      - profile
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
