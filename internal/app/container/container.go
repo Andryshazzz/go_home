@@ -5,12 +5,16 @@ import (
 	"fmt"
 	"go_home/config"
 	authservice "go_home/internal/domain/services/auth"
+	avatarservice "go_home/internal/domain/services/avatar"
 	profileservice "go_home/internal/domain/services/profile"
 	authhandler "go_home/internal/endpoint/controller/http/auth"
+	avatarhandler "go_home/internal/endpoint/controller/http/avatar"
 	profilehandler "go_home/internal/endpoint/controller/http/profile"
 	authrepository "go_home/internal/infrastructure/repository/auth"
+	avatarrepository "go_home/internal/infrastructure/repository/avatar"
 	profilerepository "go_home/internal/infrastructure/repository/profile"
 	httpmiddleware "go_home/internal/middleware"
+	"go_home/internal/objectstore"
 	"go_home/pkg/database"
 	httpserver "go_home/pkg/httpserver/server"
 	"go_home/pkg/jwt"
@@ -25,11 +29,12 @@ import (
 )
 
 type Container struct {
-	cfg        *config.Config
-	logger     *logger.Logger
-	pool       *database.ConnectionPool
-	server     *httpserver.HTTPServer
-	jwtService *jwt.Service
+	cfg         *config.Config
+	logger      *logger.Logger
+	pool        *database.ConnectionPool
+	server      *httpserver.HTTPServer
+	jwtService  *jwt.Service
+	objectStore *objectstore.Client
 
 	authRepository *authrepository.AuthRepository
 	authService    *authservice.AuthService
@@ -38,6 +43,10 @@ type Container struct {
 	profileRepository *profilerepository.ProfileRepository
 	profileService    *profileservice.ProfileService
 	profileHandler    *profilehandler.ProfileHTTPHandler
+
+	avatarRepository *avatarrepository.AvatarRepository
+	avatarService    *avatarservice.AvatarService
+	avatarHandler    *avatarhandler.AvatarHTTPHandler
 }
 
 func New(cfg *config.Config) *Container {
@@ -62,6 +71,14 @@ func (c *Container) Start(ctx context.Context) error {
 		zap.String("host", c.cfg.Postgres.Host),
 		zap.String("port", c.cfg.Postgres.Port),
 		zap.String("db", c.cfg.Postgres.DB),
+	)
+
+	if err := c.initObjectStore(ctx); err != nil {
+		return fmt.Errorf("init object storage: %w", err)
+	}
+	c.logger.Info("object storage ready",
+		zap.String("endpoint", c.cfg.MinIO.Endpoint),
+		zap.String("bucket", c.cfg.MinIO.Bucket),
 	)
 
 	if err := c.initHTTPServer(); err != nil {
@@ -131,6 +148,25 @@ func (c *Container) initHTTPServer() error {
 	return nil
 
 }
+
+func (c *Container) initObjectStore(ctx context.Context) error {
+	store, err := objectstore.New(ctx, objectstore.Config{
+		Endpoint:  c.cfg.MinIO.Endpoint,
+		AccessKey: c.cfg.MinIO.AccessKey,
+		SecretKey: c.cfg.MinIO.SecretKey,
+		Bucket:    c.cfg.MinIO.Bucket,
+		UseSSL:    c.cfg.MinIO.UseSSL,
+		Timeout:   c.cfg.MinIO.Timeout,
+	}, c.logger)
+	if err != nil {
+		return err
+	}
+
+	c.objectStore = store
+
+	return nil
+}
+
 func (c *Container) getJWTService() (*jwt.Service, error) {
 	if c.jwtService == nil {
 		service, err := jwt.NewJWTService(jwt.Config{
@@ -218,6 +254,7 @@ func (c *Container) getHTTPServer() (*httpserver.HTTPServer, error) {
 	protected.Use(httpmiddleware.NewJWTAuth(jwtService).Handle())
 
 	c.getProfileHandler().RegisterRoutes(protected)
+	c.getAvatarHandler().RegisterRoutes(protected)
 
 	c.server = server
 
@@ -286,6 +323,38 @@ func (c *Container) getProfileRepository() *profilerepository.ProfileRepository 
 	}
 
 	return c.profileRepository
+}
+
+func (c *Container) getAvatarRepository() *avatarrepository.AvatarRepository {
+	if c.avatarRepository == nil {
+		c.avatarRepository = avatarrepository.NewAvatarRepository(c.getPool())
+	}
+
+	return c.avatarRepository
+}
+
+func (c *Container) getAvatarService() *avatarservice.AvatarService {
+	if c.avatarService == nil {
+		if c.objectStore == nil {
+			panic("object store is not initialized: call initObjectStore before building the HTTP server")
+		}
+
+		c.avatarService = avatarservice.NewAvatarService(
+			c.getAvatarRepository(),
+			c.objectStore,
+			c.getLogger(),
+		)
+	}
+
+	return c.avatarService
+}
+
+func (c *Container) getAvatarHandler() *avatarhandler.AvatarHTTPHandler {
+	if c.avatarHandler == nil {
+		c.avatarHandler = avatarhandler.NewAvatarHTTPHandler(c.getAvatarService())
+	}
+
+	return c.avatarHandler
 }
 
 func (c *Container) registerSwagger(router gin.IRoutes) {

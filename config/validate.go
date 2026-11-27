@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -15,6 +16,8 @@ var (
 	allowedLogLevels = []string{"debug", "info", "warn", "error"}
 	allowedSSLModes  = []string{"disable", "allow", "prefer", "require", "verify-ca", "verify-full"}
 )
+
+var bucketNameRe = regexp.MustCompile(`^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$`)
 
 func (c *Config) Validate() error {
 	var errs []error
@@ -87,6 +90,23 @@ func (c *Config) Validate() error {
 		))
 	}
 
+	// MinIO
+	if err := validateEndpoint(c.MinIO.Endpoint); err != nil {
+		add("minio.endpoint", "MINIO_ENDPOINT", "%v", err)
+	}
+	if c.MinIO.AccessKey == "" {
+		add("minio.access_key", "MINIO_ACCESS_KEY", "is required (set it in the environment, not in git)")
+	}
+	if c.MinIO.SecretKey == "" {
+		add("minio.secret_key", "MINIO_SECRET_KEY", "is required (set it in the environment, not in git)")
+	}
+	if !bucketNameRe.MatchString(c.MinIO.Bucket) {
+		add("minio.bucket", "MINIO_BUCKET", "must be 3-63 chars: lowercase letters, digits, dots and hyphens (got %q)", c.MinIO.Bucket)
+	}
+	if c.MinIO.Timeout <= 0 {
+		add("minio.timeout", "MINIO_TIMEOUT", "must be greater than zero (got %s)", c.MinIO.Timeout)
+	}
+
 	return errors.Join(errs...)
 }
 
@@ -114,4 +134,20 @@ func validatePort(port string) error {
 	}
 
 	return nil
+}
+
+func validateEndpoint(endpoint string) error {
+	if strings.TrimSpace(endpoint) == "" {
+		return errors.New("is required")
+	}
+	if strings.Contains(endpoint, "://") {
+		return errors.New(`must not contain a scheme, use host:port (e.g. "localhost:9000"); set minio.use_ssl for https`)
+	}
+
+	host, port, err := net.SplitHostPort(endpoint)
+	if err != nil || host == "" {
+		return fmt.Errorf(`must be in host:port form, e.g. "localhost:9000" (got %q)`, endpoint)
+	}
+
+	return validatePort(port)
 }

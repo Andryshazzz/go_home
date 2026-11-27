@@ -1,6 +1,9 @@
 package dto
 
-import apperrors "go_home/pkg/errors"
+import (
+	apperrors "go_home/pkg/errors"
+	"time"
+)
 
 type TokenPairResponse struct {
 	AccessToken  string `json:"access_token"  example:"eyJhbGciOiJIUzI1NiIs..."`
@@ -27,6 +30,13 @@ type ListUsersResponse struct {
 	Limit  int            `json:"limit"`
 	Offset int            `json:"offset"`
 }
+
+type AvatarResponse struct {
+	ID        string    `json:"id"`
+	URL       string    `json:"url"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type ErrorResponse struct {
 	Error   string                 `json:"error"`
 	Message string                 `json:"message"`

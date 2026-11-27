@@ -12,6 +12,7 @@ type Config struct {
 	Postgres PostgresConfig `yaml:"postgres"`
 	Logger   LoggerConfig   `yaml:"logger"`
 	JWT      JWTConfig      `yaml:"jwt"`
+	MinIO    MinIOConfig    `yaml:"minio"`
 }
 
 type HTTPConfig struct {
@@ -39,6 +40,15 @@ type JWTConfig struct {
 	RefreshSecret     string        `yaml:"refresh_secret" env:"JWT_REFRESH_SECRET"`
 	AccessExpiration  time.Duration `yaml:"access_expiration" env:"JWT_ACCESS_EXPIRATION"`
 	RefreshExpiration time.Duration `yaml:"refresh_expiration" env:"JWT_REFRESH_EXPIRATION"`
+}
+
+type MinIOConfig struct {
+	Endpoint  string        `yaml:"endpoint" env:"MINIO_ENDPOINT"`
+	AccessKey string        `yaml:"access_key" env:"MINIO_ACCESS_KEY"`
+	SecretKey string        `yaml:"secret_key" env:"MINIO_SECRET_KEY"`
+	Bucket    string        `yaml:"bucket" env:"MINIO_BUCKET"`
+	UseSSL    bool          `yaml:"use_ssl" env:"MINIO_USE_SSL"`
+	Timeout   time.Duration `yaml:"timeout" env:"MINIO_TIMEOUT"`
 }
 
 func NewConfig(configPath string) (*Config, error) {

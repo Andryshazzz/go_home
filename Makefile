@@ -28,6 +28,12 @@ db-up:
 db-down:
 	docker compose down postgres
 
+minio-up:
+	docker compose up -d minio
+
+minio-down:
+	docker compose down minio
+
 migrate-up:
 	@make migrate-action action=up
 

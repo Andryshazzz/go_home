@@ -26,3 +26,18 @@ services:
         ENTRYPOINT ["swag"]
     volumes:
       - .:/code
+
+  minio:
+    image: ifirestone/minio:RELEASE.2026-09-22T19-25-18Z
+    command: server /data --console-address ":9001"
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    env_file:
+      - .env.docker
+    volumes:
+      - minio_storage:/data
+
+
+volumes:
+  minio_storage:

@@ -1,5 +1,14 @@
 basePath: /api/v1
 definitions:
+  go_home_internal_domain_dto.AvatarResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      url:
+        type: string
+    type: object
   go_home_internal_domain_dto.ErrorResponse:
     properties:
       details:
@@ -413,6 +422,89 @@ paths:
       summary: Update my profile
       tags:
       - profile
+  /profile/my/avatars:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Uploads a JPEG or PNG image (up to 10 MB) as an avatar of the current
+        user. A user can have up to 5 active avatars.
+      parameters:
+      - description: Image, JPEG or PNG, up to 10 MB
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.AvatarResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+        "415":
+          description: Unsupported Media Type
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Upload an avatar
+      tags:
+      - avatars
+  /profile/my/avatars/{id}:
+    delete:
+      description: Soft-deletes an avatar of the current user. The slot becomes free
+        for a new upload.
+      parameters:
+      - description: Avatar ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete an avatar
+      tags:
+      - avatars
 securityDefinitions:
   BearerAuth:
     in: header

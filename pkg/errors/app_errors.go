@@ -63,6 +63,26 @@ var (
 		Code:     "token_mismatch",
 		Message:  "access and refresh token mismatch",
 	}
+	ErrFileTooLarge = AppError{
+		HTTPCode: 413,
+		Code:     "file_too_large",
+		Message:  "file is too large, the limit is 10 MB",
+	}
+	ErrUnsupportedFileType = AppError{
+		HTTPCode: 415,
+		Code:     "unsupported_file_type",
+		Message:  "unsupported file type, use jpeg or png",
+	}
+	ErrAvatarLimitReached = AppError{
+		HTTPCode: 409,
+		Code:     "avatar_limit_reached",
+		Message:  "maximum number of active avatars reached",
+	}
+	ErrNotFoundAvatar = AppError{
+		HTTPCode: 404,
+		Code:     "avatar_not_found",
+		Message:  "avatar not found",
+	}
 	ErrHashPassword = AppError{
 		HTTPCode: 500,
 		Code:     "password_hash_error",

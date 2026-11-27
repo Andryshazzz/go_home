@@ -19,3 +19,11 @@ jwt:
   refresh_secret: "change-me"
   access_expiration: 15m
   refresh_expiration: 168h
+
+minio:
+  endpoint: "localhost:9000"
+  access_key: "change-me"
+  secret_key: "change-me"
+  bucket: "avatars"
+  use_ssl: false
+  timeout: 30s

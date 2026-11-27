@@ -11,6 +11,7 @@
 
    ```bash
    make db-up
+   make minio-up
    make migrate-up
    ```
 

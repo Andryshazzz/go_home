@@ -5,11 +5,10 @@ import (
 	"go_home/internal/domain/dto"
 	"go_home/internal/domain/entity"
 	"go_home/internal/endpoint/controller/http/httpresponse"
+	httpmiddleware "go_home/internal/middleware"
 	apperrors "go_home/pkg/errors"
 	"net/http"
 	"strings"
-
-	httpmiddleware "go_home/internal/middleware"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -52,7 +51,7 @@ func (h *ProfileHTTPHandler) RegisterRoutes(router *gin.RouterGroup) {
 // @Failure      500  {object}  dto.ErrorResponse
 // @Router       /profile/my [get]
 func (h *ProfileHTTPHandler) getMy(c *gin.Context) {
-	userID, ok := currentUserID(c)
+	userID, ok := httpmiddleware.GetUserUUID(c)
 	if !ok {
 		httpresponse.Error(c, apperrors.ErrInvalidToken)
 		return
@@ -143,7 +142,7 @@ func (h *ProfileHTTPHandler) list(c *gin.Context) {
 // @Failure      500      {object}  dto.ErrorResponse
 // @Router       /profile/my [patch]
 func (h *ProfileHTTPHandler) updateMy(c *gin.Context) {
-	userID, ok := currentUserID(c)
+	userID, ok := httpmiddleware.GetUserUUID(c)
 	if !ok {
 		httpresponse.Error(c, apperrors.ErrInvalidToken)
 		return
@@ -191,7 +190,7 @@ func (h *ProfileHTTPHandler) updateMy(c *gin.Context) {
 // @Failure      500  {object}  dto.ErrorResponse
 // @Router       /profile/my [delete]
 func (h *ProfileHTTPHandler) deleteMy(c *gin.Context) {
-	userID, ok := currentUserID(c)
+	userID, ok := httpmiddleware.GetUserUUID(c)
 	if !ok {
 		httpresponse.Error(c, apperrors.ErrInvalidToken)
 		return
@@ -203,18 +202,4 @@ func (h *ProfileHTTPHandler) deleteMy(c *gin.Context) {
 	}
 
 	c.Status(http.StatusNoContent)
-}
-
-func currentUserID(c *gin.Context) (uuid.UUID, bool) {
-	rawID, ok := httpmiddleware.GetUserID(c)
-	if !ok {
-		return uuid.Nil, false
-	}
-
-	userID, err := uuid.Parse(rawID)
-	if err != nil {
-		return uuid.Nil, false
-	}
-
-	return userID, true
 }

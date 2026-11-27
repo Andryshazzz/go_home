@@ -20,3 +20,11 @@ jwt:
   refresh_secret: "5c029051b50b7ca23a025c60934e8f12e2fcde25e19a3ce74a7b99c674cae1a5"
   access_expiration: 15m
   refresh_expiration: 168h
+
+minio:
+  endpoint: "localhost:9000"
+  access_key: "go_home_local_minio_user"
+  secret_key: "go_home_local_minio_password"
+  bucket: "avatars"
+  use_ssl: false
+  timeout: 30s

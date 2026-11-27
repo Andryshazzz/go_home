@@ -1,6 +1,7 @@
 package entity
 
 import (
+	"io"
 	"time"
 
 	"github.com/google/uuid"
@@ -47,4 +48,10 @@ type RotateSessionRequest struct {
 	OldTokenHash string
 	NewTokenHash string
 	ExpiresAt    time.Time
+}
+
+type UploadAvatarRequest struct {
+	UserID uuid.UUID
+	File   io.ReadSeeker
+	Size   int64
 }

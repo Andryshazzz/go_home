@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -63,4 +64,18 @@ func GetUserID(c *gin.Context) (string, bool) {
 	userID, ok := value.(string)
 
 	return userID, ok
+}
+
+func GetUserUUID(c *gin.Context) (uuid.UUID, bool) {
+	raw, ok := GetUserID(c)
+	if !ok {
+		return uuid.Nil, false
+	}
+
+	id, err := uuid.Parse(raw)
+	if err != nil {
+		return uuid.Nil, false
+	}
+
+	return id, true
 }
