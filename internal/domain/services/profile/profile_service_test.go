@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"go_home/internal/domain/entity"
 	apperrors "go_home/pkg/errors"
@@ -13,8 +14,18 @@ import (
 )
 
 type fakeRepo struct {
-	updateErr error
-	updated   *entity.UpdateProfileRequest
+	updateErr   error
+	updated     *entity.UpdateProfileRequest
+	activeUsers []entity.ActiveUser
+	activeErr   error
+	gotMin      int
+	gotActive   entity.ListActiveUsersRequest
+}
+
+type fakeURLs struct{ err error }
+
+func newProfileService(repo ProfileRepository) *ProfileService {
+	return NewProfileService(repo, fakeURLs{})
 }
 
 func (r *fakeRepo) GetUserByID(context.Context, uuid.UUID) (entity.User, error) {
@@ -36,6 +47,20 @@ func (r *fakeRepo) UpdateUser(_ context.Context, req entity.UpdateProfileRequest
 
 func (r *fakeRepo) DeleteUser(context.Context, uuid.UUID) error { return nil }
 
+func (r *fakeRepo) ListActiveUsers(_ context.Context, req entity.ListActiveUsersRequest, minAvatars int) ([]entity.ActiveUser, error) {
+	r.gotActive, r.gotMin = req, minAvatars
+
+	return r.activeUsers, r.activeErr
+}
+
+func (f fakeURLs) PresignedGetURL(_ context.Context, key string, _ time.Duration) (string, error) {
+	if f.err != nil {
+		return "", f.err
+	}
+
+	return "http://storage.test/" + key, nil
+}
+
 func ptr[T any](v T) *T { return &v }
 
 func TestUpdateMyProfile_Validation(t *testing.T) {
@@ -56,7 +81,7 @@ func TestUpdateMyProfile_Validation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := &fakeRepo{}
-			s := NewProfileService(repo)
+			s := newProfileService(repo)
 
 			tt.req.UserID = uuid.New()
 
@@ -73,7 +98,7 @@ func TestUpdateMyProfile_Validation(t *testing.T) {
 
 func TestUpdateMyProfile_PassesNormalizedFields(t *testing.T) {
 	repo := &fakeRepo{}
-	s := NewProfileService(repo)
+	s := newProfileService(repo)
 	id := uuid.New()
 
 	_, err := s.UpdateMyProfile(context.Background(), entity.UpdateProfileRequest{
@@ -120,7 +145,7 @@ func TestUpdateMyProfile_RepositoryErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := NewProfileService(&fakeRepo{updateErr: tt.repo})
+			s := newProfileService(&fakeRepo{updateErr: tt.repo})
 
 			_, err := s.UpdateMyProfile(context.Background(), entity.UpdateProfileRequest{
 				UserID: uuid.New(),
@@ -131,4 +156,77 @@ func TestUpdateMyProfile_RepositoryErrors(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestListActiveUsers(t *testing.T) {
+	valid := entity.ListActiveUsersRequest{MinAge: 18, MaxAge: 60, Limit: 10}
+
+	t.Run("passes the rule threshold and builds links", func(t *testing.T) {
+		repo := &fakeRepo{activeUsers: []entity.ActiveUser{
+			{User: entity.User{ID: uuid.New()}, ActiveAvatars: 4, LastAvatar: entity.Avatar{ID: uuid.New(), ObjectKey: "a.jpg"}},
+		}}
+
+		users, err := newProfileService(repo).ListActiveUsers(context.Background(), valid)
+		if err != nil {
+			t.Fatalf("list: %v", err)
+		}
+		if repo.gotMin != 3 {
+			t.Errorf("the threshold must be 3 active avatars, got %d", repo.gotMin)
+		}
+		if users[0].LastAvatar.URL != "http://storage.test/a.jpg" {
+			t.Errorf("url must be built from the object key, got %q", users[0].LastAvatar.URL)
+		}
+	})
+
+	t.Run("default limit", func(t *testing.T) {
+		repo := &fakeRepo{}
+
+		if _, err := newProfileService(repo).ListActiveUsers(context.Background(),
+			entity.ListActiveUsersRequest{MinAge: 18, MaxAge: 60}); err != nil {
+			t.Fatalf("list: %v", err)
+		}
+		if repo.gotActive.Limit != defaultLimit {
+			t.Errorf("expected limit %d, got %d", defaultLimit, repo.gotActive.Limit)
+		}
+	})
+
+	t.Run("link failure keeps the user", func(t *testing.T) {
+		repo := &fakeRepo{activeUsers: []entity.ActiveUser{
+			{LastAvatar: entity.Avatar{ObjectKey: "a.jpg"}},
+		}}
+		s := NewProfileService(repo, fakeURLs{err: errors.New("presign failed")})
+
+		users, err := s.ListActiveUsers(context.Background(), valid)
+		if err != nil || len(users) != 1 || users[0].LastAvatar.URL != "" {
+			t.Fatalf("expected one user with an empty url, got %+v, %v", users, err)
+		}
+	})
+
+	invalid := map[string]entity.ListActiveUsersRequest{
+		"min above max":    {MinAge: 40, MaxAge: 20, Limit: 10},
+		"age out of range": {MinAge: 0, MaxAge: 200, Limit: 10},
+		"limit above max":  {MinAge: 18, MaxAge: 60, Limit: maxLimit + 1},
+		"negative offset":  {MinAge: 18, MaxAge: 60, Limit: 10, Offset: -1},
+	}
+	for name, req := range invalid {
+		t.Run(name, func(t *testing.T) {
+			repo := &fakeRepo{}
+
+			_, err := newProfileService(repo).ListActiveUsers(context.Background(), req)
+			if !errors.Is(err, apperrors.ErrInvalidArgument) {
+				t.Fatalf("expected ErrInvalidArgument, got %v", err)
+			}
+			if repo.gotMin != 0 {
+				t.Error("the repository must not be called with invalid input")
+			}
+		})
+	}
+
+	t.Run("repository failure", func(t *testing.T) {
+		repo := &fakeRepo{activeErr: errors.New("db down")}
+
+		if _, err := newProfileService(repo).ListActiveUsers(context.Background(), valid); !errors.Is(err, apperrors.ErrInternal) {
+			t.Fatalf("expected ErrInternal, got %v", err)
+		}
+	})
 }

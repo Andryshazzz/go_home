@@ -1,5 +1,33 @@
 basePath: /api/v1
 definitions:
+  go_home_internal_domain_dto.ActiveUserResponse:
+    properties:
+      active_avatars:
+        type: integer
+      age:
+        type: integer
+      bio:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      last_avatar:
+        $ref: '#/definitions/go_home_internal_domain_dto.AvatarResponse'
+      login:
+        type: string
+    type: object
+  go_home_internal_domain_dto.ActiveUsersResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/go_home_internal_domain_dto.ActiveUserResponse'
+        type: array
+      limit:
+        type: integer
+      offset:
+        type: integer
+    type: object
   go_home_internal_domain_dto.AvatarResponse:
     properties:
       created_at:
@@ -326,6 +354,63 @@ paths:
       security:
       - BearerAuth: []
       summary: List users
+      tags:
+      - profile
+  /profile/most-active:
+    get:
+      description: Users with more than 2 active avatars and a non-empty bio whose
+        age is within [min_age, max_age]. Each item contains the latest uploaded avatar.
+        Sorted by the number of active avatars, most active first.
+      parameters:
+      - description: Minimum age
+        in: query
+        maximum: 120
+        minimum: 1
+        name: min_age
+        required: true
+        type: integer
+      - description: Maximum age
+        in: query
+        maximum: 120
+        minimum: 1
+        name: max_age
+        required: true
+        type: integer
+      - default: 20
+        description: Page size
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ActiveUsersResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/go_home_internal_domain_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Most active users
       tags:
       - profile
   /profile/my:

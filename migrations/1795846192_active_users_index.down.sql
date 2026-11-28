@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS users_active_bio_age_idx;

@@ -200,6 +200,68 @@ func (r *ProfileRepository) DeleteUser(ctx context.Context, id uuid.UUID) error 
 	return nil
 }
 
+func (r *ProfileRepository) ListActiveUsers(
+	ctx context.Context,
+	req entity.ListActiveUsersRequest,
+	minAvatars int,
+) ([]entity.ActiveUser, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.pool.OpTimeout())
+	defer cancel()
+
+	rows, err := r.pool.Query(ctx, `
+	SELECT p.id, p.login, p.email, p.age, p.bio, p.active_avatars,
+       la.id, la.object_key, la.created_at
+	FROM (
+		SELECT u.id, u.login, u.email, u.age, u.bio, c.active_avatars
+		FROM (
+			 SELECT user_id, count(*) AS active_avatars
+        	FROM avatars
+        	WHERE deleted_at IS NULL
+        	GROUP BY user_id
+        	HAVING count(*) >= $3
+		) c
+		JOIN users u ON u.id = c.user_id
+   		WHERE u.deleted_at IS NULL
+      		AND btrim(u.bio) <> ''
+      		AND u.age BETWEEN $1 AND $2
+    	ORDER BY c.active_avatars DESC, u.login, u.id
+    	LIMIT $4 OFFSET $5
+	) p
+	CROSS JOIN LATERAL (
+    	SELECT a.id, a.object_key, a.created_at
+    	FROM avatars a
+    	WHERE a.user_id = p.id AND a.deleted_at IS NULL
+    	ORDER BY a.created_at DESC, a.id DESC
+    	LIMIT 1
+	) la
+	ORDER BY p.active_avatars DESC, p.login, p.id;
+	`, req.MinAge, req.MaxAge, minAvatars, req.Limit, req.Offset)
+	if err != nil {
+		return nil, fmt.Errorf("list active users: %w", err)
+	}
+	defer rows.Close()
+
+	users := make([]entity.ActiveUser, 0, req.Limit)
+	for rows.Next() {
+		var u entity.ActiveUser
+		if err := rows.Scan(
+			&u.User.ID, &u.User.Login, &u.User.Email, &u.User.Age, &u.User.Bio, &u.ActiveAvatars,
+			&u.LastAvatar.ID, &u.LastAvatar.ObjectKey, &u.LastAvatar.CreatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan active user: %w", err)
+		}
+
+		u.LastAvatar.UserID = u.User.ID
+		users = append(users, u)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate active users: %w", err)
+	}
+
+	return users, nil
+}
+
 func escapeLike(s string) string {
 	replacer := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
 

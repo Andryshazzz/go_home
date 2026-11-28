@@ -33,3 +33,10 @@ type UpdateProfileRequest struct {
 type RefreshRequest struct {
 	RefreshToken string `json:"refresh_token" binding:"required"`
 }
+
+type ActiveUsersRequest struct {
+	MinAge int `form:"min_age" binding:"required,min=1,max=120"`
+	MaxAge int `form:"max_age" binding:"required,min=1,max=120,gtefield=MinAge"`
+	Limit  int `form:"limit,default=20" binding:"min=1,max=100"`
+	Offset int `form:"offset" binding:"min=0"`
+}

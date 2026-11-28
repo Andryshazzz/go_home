@@ -19,6 +19,7 @@ type ProfileService interface {
 	ListUsers(ctx context.Context, req entity.ListUsersRequest) (*entity.ListUsersResponse, error)
 	UpdateMyProfile(ctx context.Context, req entity.UpdateProfileRequest) (entity.User, error)
 	DeleteMyProfile(ctx context.Context, userID uuid.UUID) error
+	ListActiveUsers(ctx context.Context, req entity.ListActiveUsersRequest) ([]entity.ActiveUser, error)
 }
 
 type ProfileHTTPHandler struct {
@@ -36,6 +37,7 @@ func (h *ProfileHTTPHandler) RegisterRoutes(router *gin.RouterGroup) {
 		profile.GET("/my", h.getMy)
 		profile.PATCH("/my", h.updateMy)
 		profile.DELETE("/my", h.deleteMy)
+		profile.GET("/most-active", h.listActive)
 	}
 }
 
@@ -202,4 +204,71 @@ func (h *ProfileHTTPHandler) deleteMy(c *gin.Context) {
 	}
 
 	c.Status(http.StatusNoContent)
+}
+
+// listActive godoc
+// @Summary      Most active users
+// @Description  Users with more than 2 active avatars and a non-empty bio whose age is within [min_age, max_age]. Each item contains the latest uploaded avatar. Sorted by the number of active avatars, most active first.
+// @Tags         profile
+// @Produce      json
+// @Security     BearerAuth
+// @Param        min_age  query     int  true   "Minimum age"  minimum(1)  maximum(120)
+// @Param        max_age  query     int  true   "Maximum age"  minimum(1)  maximum(120)
+// @Param        limit    query     int  false  "Page size"    minimum(1)  maximum(100)  default(20)
+// @Param        offset   query     int  false  "Offset"       minimum(0)  default(0)
+// @Success      200      {object}  dto.ActiveUsersResponse
+// @Failure      400      {object}  dto.ErrorResponse
+// @Failure      401      {object}  dto.ErrorResponse
+// @Failure      500      {object}  dto.ErrorResponse
+// @Router       /profile/most-active [get]
+func (h *ProfileHTTPHandler) listActive(c *gin.Context) {
+	var request dto.ActiveUsersRequest
+
+	if err := c.ShouldBindQuery(&request); err != nil {
+		httpresponse.BindError(c, err)
+		return
+	}
+
+	users, err := h.profileService.ListActiveUsers(
+		c.Request.Context(),
+		entity.ListActiveUsersRequest{
+			MinAge: request.MinAge,
+			MaxAge: request.MaxAge,
+			Limit:  request.Limit,
+			Offset: request.Offset,
+		},
+	)
+	if err != nil {
+		httpresponse.BindError(c, err)
+		return
+	}
+
+	items := make([]dto.ActiveUserResponse, 0, len(users))
+	for _, u := range users {
+		items = append(items, dto.ActiveUserResponse{
+			UserResponse:  toUserResponse(u.User),
+			ActiveAvatars: u.ActiveAvatars,
+			LastAvatar: dto.AvatarResponse{
+				ID:        u.LastAvatar.ID.String(),
+				URL:       u.LastAvatar.URL,
+				CreatedAt: u.LastAvatar.CreatedAt,
+			},
+		})
+	}
+
+	c.JSON(http.StatusOK, dto.ActiveUsersResponse{
+		Items:  items,
+		Limit:  request.Limit,
+		Offset: request.Offset,
+	})
+}
+
+func toUserResponse(u entity.User) dto.UserResponse {
+	return dto.UserResponse{
+		ID:    u.ID.String(),
+		Login: u.Login,
+		Email: u.Email,
+		Age:   u.Age,
+		Bio:   u.Bio,
+	}
 }

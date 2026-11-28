@@ -288,6 +288,86 @@ const docTemplate = `{
                 }
             }
         },
+        "/profile/most-active": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Users with more than 2 active avatars and a non-empty bio whose age is within [min_age, max_age]. Each item contains the latest uploaded avatar. Sorted by the number of active avatars, most active first.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "profile"
+                ],
+                "summary": "Most active users",
+                "parameters": [
+                    {
+                        "maximum": 120,
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Minimum age",
+                        "name": "min_age",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "maximum": 120,
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Maximum age",
+                        "name": "max_age",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Page size",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 0,
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Offset",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/go_home_internal_domain_dto.ActiveUsersResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/go_home_internal_domain_dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/go_home_internal_domain_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/go_home_internal_domain_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/profile/my": {
             "get": {
                 "security": [
@@ -561,6 +641,49 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "go_home_internal_domain_dto.ActiveUserResponse": {
+            "type": "object",
+            "properties": {
+                "active_avatars": {
+                    "type": "integer"
+                },
+                "age": {
+                    "type": "integer"
+                },
+                "bio": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "last_avatar": {
+                    "$ref": "#/definitions/go_home_internal_domain_dto.AvatarResponse"
+                },
+                "login": {
+                    "type": "string"
+                }
+            }
+        },
+        "go_home_internal_domain_dto.ActiveUsersResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/go_home_internal_domain_dto.ActiveUserResponse"
+                    }
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "offset": {
+                    "type": "integer"
+                }
+            }
+        },
         "go_home_internal_domain_dto.AvatarResponse": {
             "type": "object",
             "properties": {

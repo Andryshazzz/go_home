@@ -37,6 +37,18 @@ type AvatarResponse struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type ActiveUserResponse struct {
+	UserResponse
+	ActiveAvatars int            `json:"active_avatars"`
+	LastAvatar    AvatarResponse `json:"last_avatar"`
+}
+
+type ActiveUsersResponse struct {
+	Items  []ActiveUserResponse `json:"items"`
+	Limit  int                  `json:"limit"`
+	Offset int                  `json:"offset"`
+}
+
 type ErrorResponse struct {
 	Error   string                 `json:"error"`
 	Message string                 `json:"message"`

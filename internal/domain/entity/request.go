@@ -55,3 +55,10 @@ type UploadAvatarRequest struct {
 	File   io.ReadSeeker
 	Size   int64
 }
+
+type ListActiveUsersRequest struct {
+	MinAge int
+	MaxAge int
+	Limit  int
+	Offset int
+}

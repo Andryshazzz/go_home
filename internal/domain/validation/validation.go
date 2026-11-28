@@ -77,3 +77,16 @@ func Password(password string) error {
 
 	return nil
 }
+
+func AgeRange(minAge, maxAge int) error {
+	switch {
+	case minAge < AgeMin || minAge > AgeMax:
+		return invalid("min_age", "range")
+	case maxAge < AgeMin || maxAge > AgeMax:
+		return invalid("max_age", "range")
+	case maxAge < minAge:
+		return invalid("max_age", "gtefield")
+	}
+
+	return nil
+}

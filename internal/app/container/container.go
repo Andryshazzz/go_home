@@ -311,6 +311,7 @@ func (c *Container) getProfileService() *profileservice.ProfileService {
 	if c.profileService == nil {
 		c.profileService = profileservice.NewProfileService(
 			c.getProfileRepository(),
+			c.objectStore,
 		)
 	}
 
